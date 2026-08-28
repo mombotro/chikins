@@ -123,5 +123,5 @@ object FeedConfig {
 object PopulationConfig {
     const val MIN_POPULATION = 5
     const val MAX_POPULATION = 15
-    const val INITIAL_POPULATION = 8
+    const val INITIAL_POPULATION = 1
 }

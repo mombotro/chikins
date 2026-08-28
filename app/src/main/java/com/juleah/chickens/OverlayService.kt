@@ -12,6 +12,7 @@ import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
+import com.juleah.chickens.render.OverlayRenderer
 import com.juleah.chickens.sim.Flock
 import com.juleah.chickens.sim.RandomRng
 import com.juleah.chickens.sim.SystemClock
@@ -34,6 +35,7 @@ class OverlayService : Service() {
     lateinit var flock: Flock
         private set
 
+    private lateinit var renderer: OverlayRenderer
     private val tickHandler = Handler(Looper.getMainLooper())
     private var isRunning = false
 
@@ -41,6 +43,7 @@ class OverlayService : Service() {
         override fun run() {
             flock.tick()
             Log.d(TAG, "population=${flock.populationCount()}")
+            renderer.render(flock)
             if (isRunning) {
                 tickHandler.postDelayed(this, TICK_INTERVAL_MS)
             }
@@ -63,6 +66,8 @@ class OverlayService : Service() {
             screenHeightPx = screenHeightPx
         )
         flock.seedInitialPopulation()
+
+        renderer = OverlayRenderer(this, windowManager)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -79,6 +84,7 @@ class OverlayService : Service() {
     override fun onDestroy() {
         isRunning = false
         tickHandler.removeCallbacks(tickRunnable)
+        renderer.clear()
         super.onDestroy()
     }
 

@@ -25,6 +25,19 @@ class Flock(
         repeat(PopulationConfig.INITIAL_POPULATION) { spawnAdultChicken() }
     }
 
+    /** Culls the flock down to a single chicken - clears all chicks and eggs too. */
+    fun killAllButOne() {
+        val survivor = chickens.firstOrNull()
+        chickens.clear()
+        chicks.clear()
+        eggs.clear()
+        if (survivor != null) {
+            chickens.add(survivor)
+        } else {
+            spawnAdultChicken()
+        }
+    }
+
     fun spawnAdultChicken(): ChickenEntity {
         val chicken = ChickenEntity(
             id = newId(),

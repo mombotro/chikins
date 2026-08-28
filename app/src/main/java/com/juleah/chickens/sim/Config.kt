@@ -130,6 +130,9 @@ object FeedConfig {
 
 object PopulationConfig {
     const val MIN_POPULATION = 1
-    const val MAX_POPULATION = 15
+    // Not const: user-adjustable at runtime via MainActivity's "max chikins"
+    // setting, read live by PopulationRegulator on every call - no extra
+    // plumbing needed since this object is a single process-wide instance.
+    var MAX_POPULATION = 15
     const val INITIAL_POPULATION = 1
 }

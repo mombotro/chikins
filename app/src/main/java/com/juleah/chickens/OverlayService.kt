@@ -29,6 +29,10 @@ class OverlayService : Service() {
         private const val NOTIFICATION_CHANNEL_ID = "chickens_overlay"
         private const val NOTIFICATION_ID = 1
         const val TICK_INTERVAL_MS = 33L // ~30fps
+
+        /** Same-process reference so MainActivity can reach the live Flock (e.g. "kill all but one") while running. */
+        var instance: OverlayService? = null
+            private set
     }
 
     lateinit var windowManager: WindowManager
@@ -132,6 +136,7 @@ class OverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         val metrics = DisplayMetrics()
         @Suppress("DEPRECATION")
@@ -187,6 +192,7 @@ class OverlayService : Service() {
     }
 
     override fun onDestroy() {
+        instance = null
         isRunning = false
         tickHandler.removeCallbacks(tickRunnable)
         renderer.clear()

@@ -158,7 +158,6 @@ class OverlayService : Service() {
             context = this,
             windowManager = windowManager,
             sizePx = dockSizePx,
-            onDrop = { x, y -> flock.placeFeed(x, y) },
             onTap = { placementOverlay.arm() }
         )
         feedBagView.imageView.setImageBitmap(

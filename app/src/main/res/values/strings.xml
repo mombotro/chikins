@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Chickens</string>
+    <string name="app_name">chikins</string>
     <string name="status_stopped">Chickens are not running</string>
     <string name="status_running">Chickens are running</string>
     <string name="start_chickens">Start Chickens</string>

@@ -13,8 +13,22 @@ class ChickenEntity(
     var isDead: Boolean = false
         private set
 
+    /**
+     * Resets the frame index/timer the instant the state actually changes,
+     * not on the next advanceAnimation() call. Without this, a method that
+     * sets animState after advanceAnimation() already ran this tick (e.g.
+     * wander()'s peck/idle-chance branches) would render one frame picked
+     * from the *previous* state's frame count against the *new* state's
+     * array - a visible one-tick glitch between e.g. walking and pecking.
+     */
     var animState: ChickenAnimState = ChickenAnimState.IDLE
-        private set
+        private set(value) {
+            if (field != value) {
+                animFrameIndex = 0
+                animFrameTimeMs = 0L
+            }
+            field = value
+        }
     var facingRight: Boolean = true
         private set
 
@@ -33,7 +47,6 @@ class ChickenEntity(
     private var feedPeckRemainingMs = 0L
     private var targetFeedId: Long? = null
 
-    private var lastAnimState = ChickenAnimState.IDLE
     private var animFrameIndex = 0
     private var animFrameTimeMs = 0L
 
@@ -53,11 +66,8 @@ class ChickenEntity(
 
     /**
      * Actual sprite-sheet frame index for the current animation state/timing.
-     * Indexed modulo the current state's frame count: wander() can change
-     * animState after advanceAnimation() already ran this call (e.g. the
-     * peck/idle-chance branches), leaving animFrameIndex sized for the
-     * *previous* state's (possibly larger) frame array until the next
-     * advanceAnimation() call catches up and resets it.
+     * Indexed modulo the current state's frame count as a defensive safety
+     * net (the animState setter above is what actually keeps this in sync).
      */
     fun currentSpriteFrame(): Int {
         val frames = framesFor(animState)
@@ -230,11 +240,6 @@ class ChickenEntity(
         }
 
     private fun advanceAnimation(deltaMs: Long) {
-        if (animState != lastAnimState) {
-            lastAnimState = animState
-            animFrameIndex = 0
-            animFrameTimeMs = 0L
-        }
         animFrameTimeMs += deltaMs
         val speed = speedFor(animState)
         if (animFrameTimeMs >= speed) {

@@ -52,8 +52,12 @@ object ChickenConfig {
 
 object ChickConfig {
     const val SIZE_PX = 16
-    const val MIN_GROWTH_MS = 1 * 60_000L
-    const val MAX_GROWTH_MS = 3 * 60_000L
+    // Well under ChickenConfig.MIN_LIFESPAN_MS (5min): a chick's full
+    // pipeline (egg-lay wait + sit + move-away + hatch, on top of this) needs
+    // real headroom under a parent's shortest possible lifespan or the flock
+    // trends toward extinction faster than it can replace itself.
+    const val MIN_GROWTH_MS = 20_000L
+    const val MAX_GROWTH_MS = 45_000L
 
     // px/second, same rationale as ChickenConfig.
     const val FOLLOW_PARENT_SPEED = 70.0
@@ -62,6 +66,7 @@ object ChickConfig {
     const val RUN_AWAY_DURATION_MS = 3000L
     const val FOLLOW_PARENT_DISTANCE_PX = 40.0
     const val MOVING_SPEED_THRESHOLD = 5.0
+    const val FEED_APPROACH_SPEED = 90.0
 
     // Per-second chances, same rationale as ChickenConfig's *_CHANCE block.
     const val PECK_CHANCE = 0.3
@@ -88,10 +93,10 @@ object ChickConfig {
     val RIDING_FRAMES = intArrayOf(1)
     const val RIDING_FRAME_SPEED_MS = 1000L
 
-    // Eating from a nearby feed pile knocks time off growUpAtMs directly
-    // (chicks don't path toward feed the way chickens do - this is a
-    // passive bonus for happening to be near one), gated by a cooldown so
-    // a chick sitting on a pile doesn't grow up instantly.
+    // Eating from a feed pile (chicks actively path to one within
+    // FeedConfig.NOTIFY_RADIUS_FRACTION, same as chickens) knocks time off
+    // growUpAtMs directly, gated by a cooldown so a chick standing on a pile
+    // doesn't grow up instantly.
     const val FEED_EAT_RADIUS_PX = 24.0
     const val FEED_EAT_COOLDOWN_MS = 1000L
     const val GROWTH_REDUCTION_PER_FEED_MS = 5_000L

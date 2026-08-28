@@ -17,7 +17,6 @@ import android.view.WindowManager
 import com.juleah.chickens.render.FeedBagView
 import com.juleah.chickens.render.OverlayRenderer
 import com.juleah.chickens.render.PlacementOverlay
-import com.juleah.chickens.sim.ChickConfig
 import com.juleah.chickens.sim.EggState
 import com.juleah.chickens.sim.FeedConfig
 import com.juleah.chickens.sim.Flock
@@ -32,6 +31,8 @@ class OverlayService : Service() {
         private const val NOTIFICATION_ID = 1
         const val TICK_INTERVAL_MS = 33L // ~30fps
         private const val ACTION_CULL = "com.juleah.chickens.ACTION_CULL"
+        private const val PREFS_NAME = "chikins_prefs"
+        private const val PREF_SHOW_FEED_BAG = "show_feed_bag"
 
         /** Same-process reference so MainActivity can reach the live Flock (e.g. "kill all but one") while running. */
         var instance: OverlayService? = null
@@ -106,20 +107,33 @@ class OverlayService : Service() {
             }
 
             flock.chicks.forEach { chick ->
-                val parent = chick.parentId?.let { pid -> flock.chickens.find { it.id == pid } }
-                if (parent != null) {
-                    chick.followParent(deltaMs, parent.x, parent.y, parent.facingRight, screenWidthPx, screenHeightPx)
-                } else {
-                    chick.wanderAlone(deltaMs, screenWidthPx, screenHeightPx)
+                val chickTargetId = chick.currentTargetFeedId()
+                val chickTargetPile = chickTargetId?.let { id -> flock.feedPiles.find { it.id == id } }
+                val seekingFeed = when {
+                    chickTargetPile != null -> {
+                        val reached = chick.moveTowardFeed(deltaMs, chickTargetPile.x, chickTargetPile.y, screenWidthPx, screenHeightPx)
+                        if (reached) chickTargetPile.consume()
+                        if (reached || chickTargetPile.isEmpty) chick.clearTargetFeed()
+                        true
+                    }
+                    chick.isBusyRiding() -> false
+                    else -> {
+                        val nearby = flock.feedPiles.minByOrNull { distanceBetween(chick.x, chick.y, it.x, it.y) }
+                        if (nearby != null && distanceBetween(chick.x, chick.y, nearby.x, nearby.y) <= feedNotifyRadiusPx) {
+                            chick.rushToFeed(nearby.id)
+                            true
+                        } else {
+                            false
+                        }
+                    }
                 }
 
-                if (chick.canEatFeed()) {
-                    val nearbyPile = flock.feedPiles.find {
-                        distanceBetween(chick.x, chick.y, it.x, it.y) <= ChickConfig.FEED_EAT_RADIUS_PX
-                    }
-                    if (nearbyPile != null) {
-                        nearbyPile.consume()
-                        chick.eatFeed()
+                if (!seekingFeed) {
+                    val parent = chick.parentId?.let { pid -> flock.chickens.find { it.id == pid } }
+                    if (parent != null) {
+                        chick.followParent(deltaMs, parent.x, parent.y, parent.facingRight, screenWidthPx, screenHeightPx)
+                    } else {
+                        chick.wanderAlone(deltaMs, screenWidthPx, screenHeightPx)
                     }
                 }
             }
@@ -175,6 +189,15 @@ class OverlayService : Service() {
             dockX = (screenWidthPx - dockSizePx - 24).toInt(),
             dockY = ((screenHeightPx - dockSizePx) / 2.0).toInt()
         )
+
+        val showFeedBag = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(PREF_SHOW_FEED_BAG, true)
+        feedBagView.setVisible(showFeedBag)
+    }
+
+    /** Live toggle for MainActivity's "show feed bag" setting while this service is running. */
+    fun setFeedBagVisible(visible: Boolean) {
+        feedBagView.setVisible(visible)
+        if (!visible) placementOverlay.disarm()
     }
 
     private fun distanceBetween(x1: Double, y1: Double, x2: Double, y2: Double): Double {

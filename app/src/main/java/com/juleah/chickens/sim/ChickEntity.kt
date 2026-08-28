@@ -16,9 +16,25 @@ class ChickEntity(
         private set
 
     private var feedEatCooldownRemainingMs = 0L
+    private var targetFeedId: Long? = null
 
+    /**
+     * Resets the frame index/timer the instant the state actually changes,
+     * not on the next advanceAnimation() call. Without this, a method that
+     * sets animState after advanceAnimation() already ran this tick (e.g.
+     * the peck-chance branch in wanderAlone()) would render one frame
+     * picked from the *previous* state's frame count against the *new*
+     * state's array - a visible one-tick glitch between e.g. walking and
+     * pecking.
+     */
     var animState: ChickAnimState = ChickAnimState.IDLE
-        private set
+        private set(value) {
+            if (field != value) {
+                animFrameIndex = 0
+                animFrameTimeMs = 0L
+            }
+            field = value
+        }
     var facingRight: Boolean = true
         private set
 
@@ -31,7 +47,6 @@ class ChickEntity(
     private var isRiding = false
     private var ridingRemainingMs = 0L
 
-    private var lastAnimState = ChickAnimState.IDLE
     private var animFrameIndex = 0
     private var animFrameTimeMs = 0L
 
@@ -49,6 +64,8 @@ class ChickEntity(
         return frames[animFrameIndex % frames.size]
     }
 
+    fun isBusyRiding(): Boolean = isRiding
+
     /** Tap handling: dismount if riding, otherwise run away, matching mombotro. */
     fun handleTap() {
         if (isRiding) {
@@ -64,6 +81,10 @@ class ChickEntity(
         runAwayRemainingMs = ChickConfig.RUN_AWAY_DURATION_MS
     }
 
+    fun currentTargetFeedId(): Long? = targetFeedId
+    fun clearTargetFeed() { targetFeedId = null }
+    fun rushToFeed(feedId: Long) { targetFeedId = feedId }
+
     /** Whether this chick can eat from a feed pile right now (see FEED_EAT_COOLDOWN_MS). */
     fun canEatFeed(): Boolean = feedEatCooldownRemainingMs <= 0
 
@@ -75,6 +96,35 @@ class ChickEntity(
 
     private fun tickFeedCooldown(deltaMs: Long) {
         if (feedEatCooldownRemainingMs > 0) feedEatCooldownRemainingMs -= deltaMs
+    }
+
+    /** Called when this chick has a feed pile target (see rushToFeed). Returns true once it actually takes a bite. */
+    fun moveTowardFeed(deltaMs: Long, feedX: Double, feedY: Double, screenWidthPx: Double, screenHeightPx: Double): Boolean {
+        advanceAnimation(deltaMs)
+        tickFeedCooldown(deltaMs)
+
+        val centeringOffset = (ChickConfig.SIZE_PX - FeedConfig.SIZE_PX) / 2.0
+        val targetX = feedX - centeringOffset
+        val targetY = feedY - centeringOffset
+        val dx = targetX - x
+        val dy = targetY - y
+        val distance = kotlin.math.sqrt(dx * dx + dy * dy)
+
+        if (distance <= 10.0) {
+            animState = ChickAnimState.PECKING
+            if (canEatFeed()) {
+                eatFeed()
+                return true
+            }
+            return false
+        }
+
+        val seconds = deltaMs / 1000.0
+        x += (dx / distance) * ChickConfig.FEED_APPROACH_SPEED * seconds
+        y += (dy / distance) * ChickConfig.FEED_APPROACH_SPEED * seconds
+        facingRight = dx > 0
+        animState = ChickAnimState.WALKING
+        return false
     }
 
     fun followParent(
@@ -121,7 +171,17 @@ class ChickEntity(
         }
 
         if (distance <= ChickConfig.FOLLOW_PARENT_DISTANCE_PX) {
-            animState = ChickAnimState.IDLE
+            // Close enough: mill around near the parent instead of freezing
+            // in place. Wandering back out past FOLLOW_PARENT_DISTANCE_PX
+            // just re-triggers the walk-toward-parent branch above on a
+            // later tick, so no separate "stay within radius" logic is
+            // needed here.
+            if (rng.nextDouble() < ChickConfig.WANDER_DIRECTION_CHANGE_CHANCE * seconds) {
+                velocityX = (rng.nextDouble() - 0.5) * ChickConfig.WANDER_SPEED
+                velocityY = (rng.nextDouble() - 0.5) * ChickConfig.WANDER_SPEED
+            }
+            move(deltaMs, screenWidthPx, screenHeightPx)
+            animState = movingAnimState()
             return
         }
 
@@ -218,11 +278,6 @@ class ChickEntity(
         }
 
     private fun advanceAnimation(deltaMs: Long) {
-        if (animState != lastAnimState) {
-            lastAnimState = animState
-            animFrameIndex = 0
-            animFrameTimeMs = 0L
-        }
         animFrameTimeMs += deltaMs
         val speed = speedFor(animState)
         if (animFrameTimeMs >= speed) {

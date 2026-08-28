@@ -55,6 +55,18 @@ class FeedBagView(
         }
     }
 
+    /** Shows or hides the bag without losing its current position (layoutParams.x/y persists whether added or not). */
+    fun setVisible(visible: Boolean) {
+        if (visible == added) return
+        if (visible) {
+            windowManager.addView(imageView, layoutParams)
+            added = true
+        } else {
+            windowManager.removeView(imageView)
+            added = false
+        }
+    }
+
     private fun handleTouch(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {

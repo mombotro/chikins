@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.text.Html
 import android.text.method.LinkMovementMethod
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
@@ -22,6 +23,8 @@ class MainActivity : Activity() {
         private const val PREF_MAX_POPULATION = "max_population"
         // SeekBar progress 0-49 maps to max population 1-50.
         private const val MAX_POPULATION_FLOOR = 1
+        // Must match OverlayService's PREF_SHOW_FEED_BAG key - both read/write the same pref.
+        private const val PREF_SHOW_FEED_BAG = "show_feed_bag"
     }
 
     private var isServiceRunning = false
@@ -40,6 +43,7 @@ class MainActivity : Activity() {
         maxChikinSeekBar = findViewById(R.id.maxChikinSeekBar)
         val helpButton = findViewById<Button>(R.id.helpButton)
         val killAllButOneButton = findViewById<Button>(R.id.killAllButOneButton)
+        val showFeedBagCheckBox = findViewById<CheckBox>(R.id.showFeedBagCheckBox)
 
         val sillyTypeface = Typeface.createFromAsset(assets, "fonts/silly.ttf")
         statusText.typeface = sillyTypeface
@@ -47,12 +51,20 @@ class MainActivity : Activity() {
         helpButton.typeface = sillyTypeface
         maxChikinLabel.typeface = sillyTypeface
         killAllButOneButton.typeface = sillyTypeface
+        showFeedBagCheckBox.typeface = sillyTypeface
 
         toggleButton.setOnClickListener {
             if (isServiceRunning) stopOverlay() else startOverlayOrRequestPermission()
         }
         helpButton.setOnClickListener { showHelp() }
         killAllButOneButton.setOnClickListener { killAllButOne() }
+
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        showFeedBagCheckBox.isChecked = prefs.getBoolean(PREF_SHOW_FEED_BAG, true)
+        showFeedBagCheckBox.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean(PREF_SHOW_FEED_BAG, checked).apply()
+            OverlayService.instance?.setFeedBagVisible(checked)
+        }
 
         val savedMax = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getInt(PREF_MAX_POPULATION, PopulationConfig.MAX_POPULATION)

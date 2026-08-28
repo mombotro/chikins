@@ -43,6 +43,22 @@ object ChickConfig {
     const val SIZE_PX = 16
     const val MIN_GROWTH_MS = 1 * 60_000L
     const val MAX_GROWTH_MS = 3 * 60_000L
+
+    // px/second, same rationale as ChickenConfig.
+    const val FOLLOW_PARENT_SPEED = 70.0
+    const val WANDER_SPEED = 40.0
+    const val RUN_AWAY_SPEED = 150.0
+    const val RUN_AWAY_DURATION_MS = 3000L
+    const val FOLLOW_PARENT_DISTANCE_PX = 40.0
+    const val MOVING_SPEED_THRESHOLD = 5.0
+
+    // Frame indices/speeds matching chick.png: 0-1 idle, 2-3 walk/run.
+    val IDLE_FRAMES = intArrayOf(0, 1)
+    const val IDLE_FRAME_SPEED_MS = 500L
+    val WALKING_FRAMES = intArrayOf(2, 3)
+    const val WALKING_FRAME_SPEED_MS = 150L
+    val RUNNING_FRAMES = intArrayOf(2, 3)
+    const val RUNNING_FRAME_SPEED_MS = 100L
 }
 
 object EggConfig {

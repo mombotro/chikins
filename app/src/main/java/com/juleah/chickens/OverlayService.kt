@@ -57,6 +57,15 @@ class OverlayService : Service() {
                 chicken.wander(deltaMs, screenWidthPx, screenHeightPx)
             }
 
+            flock.chicks.forEach { chick ->
+                val parent = chick.parentId?.let { pid -> flock.chickens.find { it.id == pid } }
+                if (parent != null) {
+                    chick.followParent(deltaMs, parent.x, parent.y, screenWidthPx, screenHeightPx)
+                } else {
+                    chick.wanderAlone(deltaMs, screenWidthPx, screenHeightPx)
+                }
+            }
+
             renderer.render(flock)
             if (isRunning) {
                 tickHandler.postDelayed(this, TICK_INTERVAL_MS)

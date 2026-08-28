@@ -198,7 +198,9 @@ class ChickenEntity(
         // Aim for a point that centers the (larger) chicken sprite over the
         // feed pile, not the feed's raw top-left corner - otherwise the
         // chicken's body extends down-right past the feed, making it look
-        // too low/off to the side once it "arrives".
+        // too low/off to the side once it "arrives". The feed staying visible
+        // below the chicken while pecking is a z-order fix, not a position
+        // one - see the bringToFront() call in OverlayRenderer.
         val centeringOffset = (ChickenConfig.SIZE_PX - FeedConfig.SIZE_PX) / 2.0
         val targetX = feedX - centeringOffset
         val targetY = feedY - centeringOffset

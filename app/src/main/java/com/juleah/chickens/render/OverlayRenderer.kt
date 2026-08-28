@@ -17,6 +17,7 @@ class OverlayRenderer(
     private val chickenSprite = SpriteSheet(context, R.drawable.chicken, ChickenConfig.SIZE_PX)
     private val chickenViews = mutableMapOf<Long, EntityView>()
     private val sittingChickenIds = mutableSetOf<Long>()
+    private val peckingChickenIds = mutableSetOf<Long>()
 
     private val chickSprite = SpriteSheet(context, R.drawable.chick, ChickConfig.SIZE_PX)
     private val chickViews = mutableMapOf<Long, EntityView>()
@@ -48,6 +49,16 @@ class OverlayRenderer(
                 view.bringToFront()
             } else if (!isSittingNow) {
                 sittingChickenIds.remove(chicken.id)
+            }
+
+            val isPeckingNow = chicken.animState == ChickenAnimState.PECKING
+            if (isPeckingNow && peckingChickenIds.add(chicken.id)) {
+                // Same reasoning as sitting, above: feed piles are also added
+                // after chickens exist, so without this the feed would render
+                // in front of a chicken pecking at it.
+                view.bringToFront()
+            } else if (!isPeckingNow) {
+                peckingChickenIds.remove(chicken.id)
             }
 
             view.imageView.setImageBitmap(chickenSprite.frame(chicken.currentSpriteFrame()))

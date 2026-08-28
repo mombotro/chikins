@@ -94,12 +94,19 @@ class OverlayRenderer(
             val view = feedPileViews.getOrPut(pile.id) {
                 EntityView(context, windowManager, FeedConfig.SIZE_PX)
             }
+            view.imageView.setImageBitmap(feedSprite.frame(feedFrameIndex(pile.amount)))
+            view.show(pile.x, pile.y)
+
             if (isNewPile) {
                 // Feed must render at the lowest z-level, but Android's
                 // WindowManager only supports "bring to front" (a
                 // removeView+addView), not "send to back" - so instead of
                 // trying to push the new feed window down, re-stack every
-                // other existing window above it once, right now. A new
+                // other existing window above it once, right now. Must run
+                // AFTER show() above: EntityView only actually calls
+                // addView() the first time show() runs, so bringing
+                // everything else to front before that would just have this
+                // pile's own addView land on top again afterward. A new
                 // feed pile is a rare, deliberate user action (unlike
                 // pecking, which rolls every tick), so this one-time
                 // flicker across existing windows is an acceptable cost.
@@ -110,8 +117,6 @@ class OverlayRenderer(
                 chickViews.values.forEach { it.bringToFront() }
                 eggViews.values.forEach { it.bringToFront() }
             }
-            view.imageView.setImageBitmap(feedSprite.frame(feedFrameIndex(pile.amount)))
-            view.show(pile.x, pile.y)
         }
     }
 

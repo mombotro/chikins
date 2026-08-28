@@ -12,8 +12,12 @@ import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
+import com.juleah.chickens.render.FeedBagView
 import com.juleah.chickens.render.OverlayRenderer
+import com.juleah.chickens.render.PlacementOverlay
+import com.juleah.chickens.sim.ChickConfig
 import com.juleah.chickens.sim.EggState
+import com.juleah.chickens.sim.FeedConfig
 import com.juleah.chickens.sim.Flock
 import com.juleah.chickens.sim.RandomRng
 import com.juleah.chickens.sim.SystemClock
@@ -37,6 +41,8 @@ class OverlayService : Service() {
         private set
 
     private lateinit var renderer: OverlayRenderer
+    private lateinit var feedBagView: FeedBagView
+    private lateinit var placementOverlay: PlacementOverlay
     private val tickHandler = Handler(Looper.getMainLooper())
     private var isRunning = false
     private var lastTickElapsedRealtimeMs = 0L
@@ -64,12 +70,29 @@ class OverlayService : Service() {
                 .mapNotNull { egg -> egg.sittingChickenIdOrNull()?.let { it to egg } }
                 .toMap()
 
+            val feedNotifyRadiusPx = minOf(screenWidthPx, screenHeightPx) * FeedConfig.NOTIFY_RADIUS_FRACTION
+
             flock.chickens.forEach { chicken ->
                 val sittingEgg = sittingEggByChickenId[chicken.id]
                 if (sittingEgg != null) {
                     chicken.holdSittingPose(sittingEgg.x, sittingEgg.y, deltaMs)
                 } else {
-                    chicken.wander(deltaMs, screenWidthPx, screenHeightPx)
+                    val targetId = chicken.currentTargetFeedId()
+                    val targetPile = targetId?.let { id -> flock.feedPiles.find { it.id == id } }
+                    when {
+                        targetPile != null -> {
+                            val reached = chicken.moveTowardFeed(deltaMs, targetPile.x, targetPile.y)
+                            if (reached && targetPile.consume()) chicken.clearTargetFeed()
+                        }
+                        else -> {
+                            val nearby = flock.feedPiles.minByOrNull { distanceBetween(chicken.x, chicken.y, it.x, it.y) }
+                            if (nearby != null && distanceBetween(chicken.x, chicken.y, nearby.x, nearby.y) <= feedNotifyRadiusPx) {
+                                chicken.rushToFeed(nearby.id)
+                            } else {
+                                chicken.wander(deltaMs, screenWidthPx, screenHeightPx)
+                            }
+                        }
+                    }
                     flock.maybeSitOnEgg(chicken, deltaMs)
                     flock.maybeLayEgg(chicken, deltaMs)
                 }
@@ -82,9 +105,20 @@ class OverlayService : Service() {
                 } else {
                     chick.wanderAlone(deltaMs, screenWidthPx, screenHeightPx)
                 }
+
+                if (chick.canEatFeed()) {
+                    val nearbyPile = flock.feedPiles.find {
+                        distanceBetween(chick.x, chick.y, it.x, it.y) <= ChickConfig.FEED_EAT_RADIUS_PX
+                    }
+                    if (nearbyPile != null) {
+                        nearbyPile.consume()
+                        chick.eatFeed()
+                    }
+                }
             }
 
             flock.eggsReadyToHatch().forEach { egg -> flock.confirmHatch(egg.id) }
+            flock.removeEmptyFeedPiles()
 
             // Flock's own Clock (SystemClock, see sim/Clock.kt) uses wall-clock
             // System.currentTimeMillis() for all entity deadlines - deliberately
@@ -114,6 +148,32 @@ class OverlayService : Service() {
         flock.seedInitialPopulation()
 
         renderer = OverlayRenderer(this, windowManager)
+
+        placementOverlay = PlacementOverlay(this, windowManager) { x, y ->
+            flock.placeFeed(x - FeedConfig.SIZE_PX / 2.0, y - FeedConfig.SIZE_PX / 2.0)
+        }
+
+        val dockSizePx = 48
+        feedBagView = FeedBagView(
+            context = this,
+            windowManager = windowManager,
+            sizePx = dockSizePx,
+            onDrop = { x, y -> flock.placeFeed(x, y) },
+            onTap = { placementOverlay.arm() }
+        )
+        feedBagView.imageView.setImageBitmap(
+            android.graphics.BitmapFactory.decodeResource(resources, R.drawable.feed_bag)
+        )
+        feedBagView.show(
+            dockX = (screenWidthPx - dockSizePx - 24).toInt(),
+            dockY = (screenHeightPx - dockSizePx - 24).toInt()
+        )
+    }
+
+    private fun distanceBetween(x1: Double, y1: Double, x2: Double, y2: Double): Double {
+        val dx = x1 - x2
+        val dy = y1 - y2
+        return kotlin.math.sqrt(dx * dx + dy * dy)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -131,6 +191,8 @@ class OverlayService : Service() {
         isRunning = false
         tickHandler.removeCallbacks(tickRunnable)
         renderer.clear()
+        feedBagView.remove()
+        placementOverlay.disarm()
         super.onDestroy()
     }
 

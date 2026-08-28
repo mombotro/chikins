@@ -9,6 +9,7 @@ class Flock(
     val chickens: MutableList<ChickenEntity> = mutableListOf()
     val chicks: MutableList<ChickEntity> = mutableListOf()
     val eggs: MutableList<EggEntity> = mutableListOf()
+    val feedPiles: MutableList<FeedPile> = mutableListOf()
 
     private var nextId: Long = 0L
     private fun newId(): Long = nextId++
@@ -67,6 +68,16 @@ class Flock(
         if (rng.nextDouble() >= ChickenConfig.EGG_SIT_CHANCE * (deltaMs / 1000.0)) return null
         candidate.startSitting(chicken.id, clock.nowMs())
         return candidate
+    }
+
+    fun placeFeed(x: Double, y: Double): FeedPile {
+        val pile = FeedPile(id = newId(), x = x, y = y)
+        feedPiles.add(pile)
+        return pile
+    }
+
+    fun removeEmptyFeedPiles() {
+        feedPiles.removeAll { it.isEmpty }
     }
 
     private fun distanceBetween(x1: Double, y1: Double, x2: Double, y2: Double): Double {

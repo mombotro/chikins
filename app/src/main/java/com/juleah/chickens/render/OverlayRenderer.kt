@@ -6,6 +6,7 @@ import com.juleah.chickens.R
 import com.juleah.chickens.sim.ChickConfig
 import com.juleah.chickens.sim.ChickenConfig
 import com.juleah.chickens.sim.EggConfig
+import com.juleah.chickens.sim.FeedConfig
 import com.juleah.chickens.sim.Flock
 
 class OverlayRenderer(
@@ -20,6 +21,9 @@ class OverlayRenderer(
 
     private val eggSprite = SpriteSheet(context, R.drawable.egg, EggConfig.SIZE_PX)
     private val eggViews = mutableMapOf<Long, EntityView>()
+
+    private val feedSprite = SpriteSheet(context, R.drawable.feed, FeedConfig.SIZE_PX)
+    private val feedPileViews = mutableMapOf<Long, EntityView>()
 
     fun render(flock: Flock, nowMs: Long) {
         val liveIds = flock.chickens.map { it.id }.toSet()
@@ -66,6 +70,28 @@ class OverlayRenderer(
             view.imageView.setImageBitmap(eggSprite.frame(egg.currentSpriteFrame(nowMs)))
             view.show(egg.x, egg.y)
         }
+
+        val livePileIds = flock.feedPiles.map { it.id }.toSet()
+        feedPileViews.keys.filterNot { it in livePileIds }.forEach { staleId ->
+            feedPileViews.remove(staleId)?.remove()
+        }
+
+        flock.feedPiles.forEach { pile ->
+            val view = feedPileViews.getOrPut(pile.id) {
+                EntityView(context, windowManager, FeedConfig.SIZE_PX)
+            }
+            view.imageView.setImageBitmap(feedSprite.frame(feedFrameIndex(pile.amount)))
+            view.show(pile.x, pile.y)
+        }
+    }
+
+    private fun feedFrameIndex(amount: Int): Int {
+        val fraction = amount.toDouble() / FeedConfig.INITIAL_AMOUNT
+        return when {
+            fraction > FeedConfig.FULL_FRAME_THRESHOLD -> 0
+            fraction > FeedConfig.HALF_FRAME_THRESHOLD -> 1
+            else -> 2
+        }
     }
 
     fun clear() {
@@ -75,5 +101,7 @@ class OverlayRenderer(
         chickViews.clear()
         eggViews.values.forEach { it.remove() }
         eggViews.clear()
+        feedPileViews.values.forEach { it.remove() }
+        feedPileViews.clear()
     }
 }

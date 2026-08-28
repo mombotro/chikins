@@ -7,7 +7,10 @@ class PopulationRegulatorTest {
 
     @Test
     fun `below minimum triggers direct adult spawn`() {
-        assertEquals(PopulationAction.SPAWN_ADULT, PopulationRegulator.decide(currentCount = 4))
+        assertEquals(
+            PopulationAction.SPAWN_ADULT,
+            PopulationRegulator.decide(currentCount = PopulationConfig.MIN_POPULATION - 1)
+        )
     }
 
     @Test

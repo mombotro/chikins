@@ -10,9 +10,12 @@ class ChickEntity(
     hatchTimeMs: Long,
     private val rng: Rng
 ) {
-    val growUpAtMs: Long = hatchTimeMs + rng.nextLongInRange(ChickConfig.MIN_GROWTH_MS, ChickConfig.MAX_GROWTH_MS)
+    var growUpAtMs: Long = hatchTimeMs + rng.nextLongInRange(ChickConfig.MIN_GROWTH_MS, ChickConfig.MAX_GROWTH_MS)
+        private set
     var hasGrownUp: Boolean = false
         private set
+
+    private var feedEatCooldownRemainingMs = 0L
 
     var animState: ChickAnimState = ChickAnimState.IDLE
         private set
@@ -61,6 +64,19 @@ class ChickEntity(
         runAwayRemainingMs = ChickConfig.RUN_AWAY_DURATION_MS
     }
 
+    /** Whether this chick can eat from a feed pile right now (see FEED_EAT_COOLDOWN_MS). */
+    fun canEatFeed(): Boolean = feedEatCooldownRemainingMs <= 0
+
+    /** Eating knocks time off growUpAtMs directly - eating makes chicks grow up faster. */
+    fun eatFeed() {
+        growUpAtMs -= ChickConfig.GROWTH_REDUCTION_PER_FEED_MS
+        feedEatCooldownRemainingMs = ChickConfig.FEED_EAT_COOLDOWN_MS
+    }
+
+    private fun tickFeedCooldown(deltaMs: Long) {
+        if (feedEatCooldownRemainingMs > 0) feedEatCooldownRemainingMs -= deltaMs
+    }
+
     fun followParent(
         deltaMs: Long,
         parentX: Double,
@@ -70,6 +86,7 @@ class ChickEntity(
         screenHeightPx: Double
     ) {
         advanceAnimation(deltaMs)
+        tickFeedCooldown(deltaMs)
 
         if (isRunningAway) {
             runFree(deltaMs, screenWidthPx, screenHeightPx)
@@ -116,6 +133,7 @@ class ChickEntity(
 
     fun wanderAlone(deltaMs: Long, screenWidthPx: Double, screenHeightPx: Double) {
         advanceAnimation(deltaMs)
+        tickFeedCooldown(deltaMs)
 
         if (isRunningAway) {
             runFree(deltaMs, screenWidthPx, screenHeightPx)

@@ -87,6 +87,14 @@ object ChickConfig {
     const val PECKING_FRAME_SPEED_MS = 300L
     val RIDING_FRAMES = intArrayOf(1)
     const val RIDING_FRAME_SPEED_MS = 1000L
+
+    // Eating from a nearby feed pile knocks time off growUpAtMs directly
+    // (chicks don't path toward feed the way chickens do - this is a
+    // passive bonus for happening to be near one), gated by a cooldown so
+    // a chick sitting on a pile doesn't grow up instantly.
+    const val FEED_EAT_RADIUS_PX = 24.0
+    const val FEED_EAT_COOLDOWN_MS = 1000L
+    const val GROWTH_REDUCTION_PER_FEED_MS = 5_000L
 }
 
 object EggConfig {
@@ -121,7 +129,7 @@ object FeedConfig {
 }
 
 object PopulationConfig {
-    const val MIN_POPULATION = 5
+    const val MIN_POPULATION = 1
     const val MAX_POPULATION = 15
     const val INITIAL_POPULATION = 1
 }

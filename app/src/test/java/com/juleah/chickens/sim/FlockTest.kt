@@ -83,14 +83,20 @@ class FlockTest {
         flock.tick()
         clock.set(EggConfig.MIN_SITTING_REQUIRED_MS + EggConfig.MOVE_AWAY_DELAY_MS)
         flock.tick()
-        clock.set(EggConfig.MIN_SITTING_REQUIRED_MS + EggConfig.MOVE_AWAY_DELAY_MS + EggConfig.HATCH_DURATION_MS)
+        val readyMs = EggConfig.MIN_SITTING_REQUIRED_MS + EggConfig.MOVE_AWAY_DELAY_MS + EggConfig.HATCH_FRAME_DELAY_MS * 3
+        clock.set(readyMs)
         flock.tick()
 
         assertEquals(1, flock.eggsReadyToHatch().size)
 
         flock.confirmHatch(egg.id)
 
-        assertTrue(flock.eggs.isEmpty())
         assertEquals(1, flock.chicks.size)
+        assertTrue(flock.eggs.isNotEmpty()) // shell still visible
+
+        clock.set(readyMs + EggConfig.SHELL_VISIBLE_MS)
+        flock.tick()
+
+        assertTrue(flock.eggs.isEmpty())
     }
 }

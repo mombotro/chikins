@@ -6,7 +6,6 @@ import com.juleah.chickens.R
 import com.juleah.chickens.sim.ChickConfig
 import com.juleah.chickens.sim.ChickenConfig
 import com.juleah.chickens.sim.EggConfig
-import com.juleah.chickens.sim.EggState
 import com.juleah.chickens.sim.Flock
 
 class OverlayRenderer(
@@ -22,7 +21,7 @@ class OverlayRenderer(
     private val eggSprite = SpriteSheet(context, R.drawable.egg, EggConfig.SIZE_PX)
     private val eggViews = mutableMapOf<Long, EntityView>()
 
-    fun render(flock: Flock) {
+    fun render(flock: Flock, nowMs: Long) {
         val liveIds = flock.chickens.map { it.id }.toSet()
         chickenViews.keys.filterNot { it in liveIds }.forEach { staleId ->
             chickenViews.remove(staleId)?.remove()
@@ -64,8 +63,7 @@ class OverlayRenderer(
             val view = eggViews.getOrPut(egg.id) {
                 EntityView(context, windowManager, EggConfig.SIZE_PX)
             }
-            val frameIndex = if (egg.state == EggState.HATCHING) 1 else 0
-            view.imageView.setImageBitmap(eggSprite.frame(frameIndex))
+            view.imageView.setImageBitmap(eggSprite.frame(egg.currentSpriteFrame(nowMs)))
             view.show(egg.x, egg.y)
         }
     }

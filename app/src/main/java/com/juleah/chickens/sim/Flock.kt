@@ -75,13 +75,14 @@ class Flock(
         return kotlin.math.sqrt(dx * dx + dy * dy)
     }
 
-    fun eggsReadyToHatch(): List<EggEntity> = eggs.filter { it.state == EggState.HATCHING && it.isReadyToHatch }
+    fun eggsReadyToHatch(): List<EggEntity> =
+        eggs.filter { it.state == EggState.HATCHING && it.isReadyToHatch && !it.hatchConfirmed }
 
+    /** Creates the chick; the egg's empty-shell view lingers until its own SHELL_VISIBLE_MS elapses (see tick()). */
     fun confirmHatch(eggId: Long) {
         val egg = eggs.find { it.id == eggId } ?: return
-        if (egg.state != EggState.HATCHING) return
+        if (egg.state != EggState.HATCHING || !egg.isReadyToHatch || egg.hatchConfirmed) return
         chicks.add(egg.hatch(newChickId = newId(), nowMs = clock.nowMs()))
-        eggs.removeAll { it.id == eggId }
     }
 
     fun tick() {
@@ -96,6 +97,7 @@ class Flock(
         grown.forEach { chickens.add(it.toChicken(now, rng)) }
 
         eggs.forEach { it.tick(now) }
+        eggs.removeAll { it.isReadyToRemove }
 
         if (PopulationRegulator.decide(populationCount()) == PopulationAction.SPAWN_ADULT) {
             spawnAdultChicken()

@@ -86,7 +86,10 @@ class OverlayService : Service() {
 
             flock.eggsReadyToHatch().forEach { egg -> flock.confirmHatch(egg.id) }
 
-            renderer.render(flock)
+            // Flock's own Clock (SystemClock, see sim/Clock.kt) uses wall-clock
+            // System.currentTimeMillis() for all entity deadlines - deliberately
+            // not the elapsedRealtime() used above for deltaMs, so this must match.
+            renderer.render(flock, System.currentTimeMillis())
             if (isRunning) {
                 tickHandler.postDelayed(this, TICK_INTERVAL_MS)
             }

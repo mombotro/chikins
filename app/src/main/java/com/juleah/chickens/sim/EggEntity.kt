@@ -22,9 +22,18 @@ class EggEntity(
     // MOVE_AWAY_DELAY_MS later, giving it time to actually leave first.
     private var releasedAtMs: Long? = null
     private var hatchStartedAtMs: Long = 0L
+    private var shellRemoveAtMs: Long = 0L
 
-    /** True once the HATCHING animation's own duration has elapsed - only then is confirmHatch() meaningful. */
+    /** True once frames 1-3 (crack/peek/break-free) have finished playing - the chick should be created now. */
     var isReadyToHatch: Boolean = false
+        private set
+
+    /** True once hatch() has been called - guards against creating the chick twice while the shell lingers. */
+    var hatchConfirmed: Boolean = false
+        private set
+
+    /** True once the empty-shell frame has been visible for SHELL_VISIBLE_MS - the egg view can be removed. */
+    var isReadyToRemove: Boolean = false
         private set
 
     fun startSitting(chickenId: Long, nowMs: Long) {
@@ -53,15 +62,35 @@ class EggEntity(
             return
         }
 
-        if (state == EggState.HATCHING && !isReadyToHatch) {
-            if (nowMs - hatchStartedAtMs >= EggConfig.HATCH_DURATION_MS) {
+        if (state != EggState.HATCHING) return
+
+        if (!isReadyToHatch) {
+            if (nowMs - hatchStartedAtMs >= EggConfig.HATCH_FRAME_DELAY_MS * 3) {
                 isReadyToHatch = true
             }
+            return
+        }
+
+        if (hatchConfirmed && !isReadyToRemove && nowMs >= shellRemoveAtMs) {
+            isReadyToRemove = true
+            state = EggState.HATCHED
         }
     }
 
+    /** Sprite-sheet frame (0-4) for the egg's current visible state. */
+    fun currentSpriteFrame(nowMs: Long): Int {
+        if (state != EggState.HATCHING) return 0
+        if (!isReadyToHatch) {
+            val elapsed = nowMs - hatchStartedAtMs
+            val crackIndex = (elapsed / EggConfig.HATCH_FRAME_DELAY_MS).toInt().coerceIn(0, 2)
+            return crackIndex + 1 // frames 1 (cracked), 2 (peeking), 3 (broken free)
+        }
+        return 4 // empty shell
+    }
+
     fun hatch(newChickId: Long, nowMs: Long): ChickEntity {
-        state = EggState.HATCHED
+        hatchConfirmed = true
+        shellRemoveAtMs = nowMs + EggConfig.SHELL_VISIBLE_MS
         return ChickEntity(id = newChickId, x = x, y = y, parentId = laidByChickenId, hatchTimeMs = nowMs, rng = rng)
     }
 }

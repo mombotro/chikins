@@ -98,8 +98,12 @@ object EggConfig {
     // animation visibly starting, so the chicken has time to actually walk
     // away first instead of the egg hatching right under it.
     const val MOVE_AWAY_DELAY_MS = 2000L
-    // How long the HATCHING frame is shown before the chick actually appears.
-    const val HATCH_DURATION_MS = 2500L
+    // Hatching plays through spritesheet frames 1 (cracked), 2 (peeking out),
+    // 3 (broken free) at this interval; the chick is created the moment frame
+    // 3 finishes, then frame 4 (empty shell) stays visible for
+    // SHELL_VISIBLE_MS before the egg view is removed.
+    const val HATCH_FRAME_DELAY_MS = 800L
+    const val SHELL_VISIBLE_MS = 2000L
 
     // Offset from the laying chicken's position - below and to the right,
     // not directly under it.

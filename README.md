@@ -6,7 +6,7 @@ This project is a port of the browser game mombotro. The live site is at https:/
 
 ## Requirements
 
-- Android 4.2 (Android API level 17) or later. Android assigns an API level number to each release. This app declares API level 17 as its minimum, but see "Tested versions" below.
+- Android 4.1 (Android API level 16) or later. Android assigns an API level number to each release. This app declares API level 16 as its minimum, but see "Tested versions" below.
 - Permission to draw over other apps. The app asks for this permission on first use.
 
 ## Build
@@ -43,13 +43,14 @@ The main screen has two controls below the start button.
 
 ## Tested versions
 
-Automated tests cover the simulation logic only: population limits, chicken lifespan, egg timing, and similar rules. Manual, on-device tests cover three points:
+Automated tests cover the simulation logic only: population limits, chicken lifespan, egg timing, and similar rules. Manual, on-device tests cover four points:
 
-- Android 7.1.1 (API level 25), on a real Barnes & Noble Nook HD (CyanogenMod). This confirms the pre-API-26 path: the older `TYPE_PHONE` overlay window type, and no foreground service or notification.
+- Android 4.1.2 (API level 16), on a real LG VS950. This is the app's declared minimum, and confirms the pre-API-23 path: the "draw over other apps" permission is granted at install time, with no runtime prompt at all.
+- Android 7.1.1 (API level 25), on a real Barnes & Noble Nook HD (CyanogenMod). This confirms the API-23-to-25 path: a runtime permission prompt, but still the older `TYPE_PHONE` overlay window type, and no foreground service or notification.
 - Android 10 (API level 29), on a real Samsung Galaxy Note9. This confirms the API-26-and-later path: `TYPE_APPLICATION_OVERLAY`, plus the foreground service and its notification.
 - Android 14 (API level 34), on an emulator.
 
-**This app is untested below API level 25, and between API level 26 and API level 28.** The app declares a minimum API level of 17 (Android 4.2, Jelly Bean) for broad compatibility, but the lowest version actually run on a device is API level 25. Below API level 23, the "draw over other apps" permission needs no runtime prompt at all, and that path has not been tested on real hardware. If you run this app on a device older than API level 25, watch for permission or window-type errors, and report them.
+**This app is untested between API level 17 and API level 24, and between API level 26 and API level 28.** It is also untested above API level 34. If you run this app on a device in one of those gaps, watch for permission or window-type errors, and report them.
 
 ## License
 

@@ -1,16 +1,43 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
+def keystorePropertiesFile = rootProject.file("keystore/keystore.properties")
+def keystoreProperties = new Properties()
+def hasReleaseKeystore = keystorePropertiesFile.exists()
+if (hasReleaseKeystore) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace 'com.juleah.chickens'
     compileSdk 35
 
     defaultConfig {
         applicationId "com.juleah.chickens"
-        minSdk 19
+        minSdk 17
         targetSdk 35
         versionCode 1
-        versionName "1.0"
+        versionName "0.1"
+    }
+
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            release {
+                storeFile rootProject.file("keystore/" + keystoreProperties['storeFileName'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (hasReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false
+        }
     }
 
     compileOptions {

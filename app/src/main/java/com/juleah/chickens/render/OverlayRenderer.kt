@@ -50,15 +50,6 @@ class OverlayRenderer(
                 sittingChickenIds.remove(chicken.id)
             }
 
-            // Pecking at feed has the same z-order issue as sitting on an egg
-            // (the feed pile's window is added later, so it would render on
-            // top by default), but bringToFront() does a removeView+addView,
-            // which makes the window vanish for a frame. Sitting is rare
-            // enough that the one-time flicker is acceptable; pecking is
-            // frequent (PECK_CHANCE rolls constantly), so the same fix there
-            // reads as a constant flicker instead. Left unfixed - feed may
-            // occasionally render above a pecking chicken.
-
             view.imageView.setImageBitmap(chickenSprite.frame(chicken.currentSpriteFrame()))
             view.imageView.scaleX = if (chicken.facingRight) -1f else 1f
             view.show(chicken.x, chicken.y)
@@ -99,8 +90,25 @@ class OverlayRenderer(
         }
 
         flock.feedPiles.forEach { pile ->
+            val isNewPile = pile.id !in feedPileViews
             val view = feedPileViews.getOrPut(pile.id) {
                 EntityView(context, windowManager, FeedConfig.SIZE_PX)
+            }
+            if (isNewPile) {
+                // Feed must render at the lowest z-level, but Android's
+                // WindowManager only supports "bring to front" (a
+                // removeView+addView), not "send to back" - so instead of
+                // trying to push the new feed window down, re-stack every
+                // other existing window above it once, right now. A new
+                // feed pile is a rare, deliberate user action (unlike
+                // pecking, which rolls every tick), so this one-time
+                // flicker across existing windows is an acceptable cost.
+                // Anything created after this point (new chickens, chicks,
+                // eggs) naturally stacks above it anyway, by ordinary
+                // add-order.
+                chickenViews.values.forEach { it.bringToFront() }
+                chickViews.values.forEach { it.bringToFront() }
+                eggViews.values.forEach { it.bringToFront() }
             }
             view.imageView.setImageBitmap(feedSprite.frame(feedFrameIndex(pile.amount)))
             view.show(pile.x, pile.y)

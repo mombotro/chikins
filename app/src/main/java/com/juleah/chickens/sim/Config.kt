@@ -59,8 +59,8 @@ object ChickConfig {
     // pipeline (egg-lay wait + sit + move-away + hatch, on top of this) needs
     // real headroom under a parent's shortest possible lifespan or the flock
     // trends toward extinction faster than it can replace itself.
-    const val MIN_GROWTH_MS = 20_000L
-    const val MAX_GROWTH_MS = 45_000L
+    const val MIN_GROWTH_MS = 45_000L
+    const val MAX_GROWTH_MS = 90_000L
 
     // px/second, same rationale as ChickenConfig.
     const val FOLLOW_PARENT_SPEED = 70.0

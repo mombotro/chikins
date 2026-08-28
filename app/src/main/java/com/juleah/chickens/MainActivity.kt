@@ -44,7 +44,6 @@ class MainActivity : Activity() {
         val helpButton = findViewById<Button>(R.id.helpButton)
         val killAllButOneButton = findViewById<Button>(R.id.killAllButOneButton)
         val showFeedBagCheckBox = findViewById<CheckBox>(R.id.showFeedBagCheckBox)
-        val spawnTestChickButton = findViewById<Button>(R.id.spawnTestChickButton)
 
         val sillyTypeface = Typeface.createFromAsset(assets, "fonts/silly.ttf")
         statusText.typeface = sillyTypeface
@@ -53,14 +52,12 @@ class MainActivity : Activity() {
         maxChikinLabel.typeface = sillyTypeface
         killAllButOneButton.typeface = sillyTypeface
         showFeedBagCheckBox.typeface = sillyTypeface
-        spawnTestChickButton.typeface = sillyTypeface
 
         toggleButton.setOnClickListener {
             if (isServiceRunning) stopOverlay() else startOverlayOrRequestPermission()
         }
         helpButton.setOnClickListener { showHelp() }
         killAllButOneButton.setOnClickListener { killAllButOne() }
-        spawnTestChickButton.setOnClickListener { spawnTestChick() }
 
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         showFeedBagCheckBox.isChecked = prefs.getBoolean(PREF_SHOW_FEED_BAG, true)
@@ -104,15 +101,6 @@ class MainActivity : Activity() {
             return
         }
         service.flock.killAllButOne()
-    }
-
-    private fun spawnTestChick() {
-        val service = OverlayService.instance
-        if (service == null) {
-            Toast.makeText(this, "start chikins first", Toast.LENGTH_SHORT).show()
-            return
-        }
-        service.flock.spawnTestChick()
     }
 
     @Suppress("DEPRECATION") // Html.fromHtml(String,Int) needs API24+; this app's minSdk is 19.

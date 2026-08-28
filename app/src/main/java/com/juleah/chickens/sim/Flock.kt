@@ -50,21 +50,6 @@ class Flock(
         return chicken
     }
 
-    /** Debug/testing aid: spawns a chick attached to an existing chicken (or a fresh one), bypassing the whole egg cycle. */
-    fun spawnTestChick(): ChickEntity {
-        val parent = chickens.firstOrNull() ?: spawnAdultChicken()
-        val chick = ChickEntity(
-            id = newId(),
-            x = parent.x + 20.0,
-            y = parent.y + 20.0,
-            parentId = parent.id,
-            hatchTimeMs = clock.nowMs(),
-            rng = rng
-        )
-        chicks.add(chick)
-        return chick
-    }
-
     fun layEgg(chickenId: Long, x: Double, y: Double): EggEntity {
         val egg = EggEntity(id = newId(), x = x, y = y, laidByChickenId = chickenId, rng = rng)
         eggs.add(egg)

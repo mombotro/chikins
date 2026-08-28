@@ -70,8 +70,8 @@ class OverlayService : Service() {
                     chicken.holdSittingPose(sittingEgg.x, sittingEgg.y, deltaMs)
                 } else {
                     chicken.wander(deltaMs, screenWidthPx, screenHeightPx)
-                    flock.maybeSitOnEgg(chicken)
-                    flock.maybeLayEgg(chicken)
+                    flock.maybeSitOnEgg(chicken, deltaMs)
+                    flock.maybeLayEgg(chicken, deltaMs)
                 }
             }
 

@@ -120,19 +120,21 @@ class ChickenEntity(
             }
         }
 
-        if (rng.nextDouble() < ChickenConfig.DIRECTION_CHANGE_CHANCE) {
+        val seconds = deltaMs / 1000.0
+
+        if (rng.nextDouble() < ChickenConfig.DIRECTION_CHANGE_CHANCE * seconds) {
             velocityX = (rng.nextDouble() - 0.5) * ChickenConfig.MAX_VELOCITY
             velocityY = (rng.nextDouble() - 0.5) * ChickenConfig.MAX_VELOCITY
         }
 
-        if (rng.nextDouble() < ChickenConfig.PECK_CHANCE) {
+        if (rng.nextDouble() < ChickenConfig.PECK_CHANCE * seconds) {
             isPecking = true
             peckRemainingMs = ChickenConfig.PECK_DURATION_MS
             animState = ChickenAnimState.PECKING
             return
         }
 
-        if (rng.nextDouble() < ChickenConfig.IDLE_CHANCE) {
+        if (rng.nextDouble() < ChickenConfig.IDLE_CHANCE * seconds) {
             isIdling = true
             idleRemainingMs = ChickenConfig.IDLE_MIN_DURATION_MS +
                 (rng.nextDouble() * (ChickenConfig.IDLE_MAX_DURATION_MS - ChickenConfig.IDLE_MIN_DURATION_MS)).toLong()
@@ -140,7 +142,6 @@ class ChickenEntity(
             return
         }
 
-        val seconds = deltaMs / 1000.0
         x += velocityX * seconds
         y += velocityY * seconds
         facingRight = velocityX > 0.1

@@ -42,23 +42,29 @@ class Flock(
         return egg
     }
 
-    fun maybeLayEgg(chicken: ChickenEntity): EggEntity? {
+    /**
+     * deltaMs scales the chance the same way ChickenEntity.wander() scales its
+     * own per-second chances - see the comment on ChickenConfig's *_CHANCE
+     * block for why a flat per-roll chance doesn't work with a variable tick
+     * rate.
+     */
+    fun maybeLayEgg(chicken: ChickenEntity, deltaMs: Long): EggEntity? {
         if (!canLayEgg()) return null
         val now = clock.nowMs()
         val last = lastEggTimeByChickenId[chicken.id] ?: 0L
         if (now - last < ChickenConfig.EGG_COOLDOWN_MS) return null
-        if (rng.nextDouble() >= ChickenConfig.EGG_LAY_CHANCE) return null
+        if (rng.nextDouble() >= ChickenConfig.EGG_LAY_CHANCE * (deltaMs / 1000.0)) return null
         lastEggTimeByChickenId[chicken.id] = now
         return layEgg(chicken.id, chicken.x, chicken.y)
     }
 
-    fun maybeSitOnEgg(chicken: ChickenEntity): EggEntity? {
+    fun maybeSitOnEgg(chicken: ChickenEntity, deltaMs: Long): EggEntity? {
         val candidate = eggs.find { egg ->
             egg.state == EggState.WAITING &&
                 egg.sittingChickenIdOrNull() == null &&
                 distanceBetween(chicken.x, chicken.y, egg.x, egg.y) <= ChickenConfig.EGG_SIT_DISTANCE_PX
         } ?: return null
-        if (rng.nextDouble() >= ChickenConfig.EGG_SIT_CHANCE) return null
+        if (rng.nextDouble() >= ChickenConfig.EGG_SIT_CHANCE * (deltaMs / 1000.0)) return null
         candidate.startSitting(chicken.id, clock.nowMs())
         return candidate
     }

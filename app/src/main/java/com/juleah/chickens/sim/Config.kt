@@ -10,18 +10,27 @@ object ChickenConfig {
     const val MOVING_SPEED_THRESHOLD = 5.0
     const val FEED_APPROACH_SPEED = 100.0
 
-    const val DIRECTION_CHANGE_CHANCE = 0.01
-    const val PECK_CHANCE = 0.005
+    // All *_CHANCE values are probability PER SECOND, applied each tick as
+    // chance * (deltaMs / 1000.0). mombotro's original numbers were tuned as
+    // a flat per-frame chance against its ~60fps browser rAF loop; our real
+    // tick rate varies a lot (roughly 3-6fps on real hardware, since
+    // WindowManager view updates dominate tick cost - see OverlayService),
+    // so a flat per-roll chance would fire far less often than intended and
+    // scale unpredictably with device speed. These are mombotro's per-frame
+    // values * 60 to convert them to a rate, so behavior frequency matches
+    // mombotro's intent regardless of actual tick rate.
+    const val DIRECTION_CHANGE_CHANCE = 0.6
+    const val PECK_CHANCE = 0.3
     const val PECK_DURATION_MS = 600L
-    const val IDLE_CHANCE = 0.003
+    const val IDLE_CHANCE = 0.18
     const val IDLE_MIN_DURATION_MS = 1000L
     const val IDLE_MAX_DURATION_MS = 5000L
     const val JUMP_DURATION_MS = 800L
     const val JUMP_HEIGHT_PX = 60.0
     const val JUMP_DISTANCE_PX = 40.0
-    const val EGG_LAY_CHANCE = 0.0001
+    const val EGG_LAY_CHANCE = 0.006
     const val EGG_COOLDOWN_MS = 30000L
-    const val EGG_SIT_CHANCE = 0.01
+    const val EGG_SIT_CHANCE = 0.6
     const val EGG_SIT_DISTANCE_PX = 30.0
     const val MIN_LIFESPAN_MS = 5 * 60_000L
     const val MAX_LIFESPAN_MS = 15 * 60_000L
@@ -54,12 +63,14 @@ object ChickConfig {
     const val FOLLOW_PARENT_DISTANCE_PX = 40.0
     const val MOVING_SPEED_THRESHOLD = 5.0
 
-    const val PECK_CHANCE = 0.005
+    // Per-second chances, same rationale as ChickenConfig's *_CHANCE block.
+    const val PECK_CHANCE = 0.3
     const val PECK_DURATION_MS = 600L
+    const val WANDER_DIRECTION_CHANGE_CHANCE = 0.6
 
     // Riding on the parent chicken's back, ported from mombotro's chick.js.
-    const val RIDING_CHANCE = 0.003
-    const val RIDING_STOP_CHANCE = 0.002
+    const val RIDING_CHANCE = 0.18
+    const val RIDING_STOP_CHANCE = 0.12
     const val RIDING_MIN_DURATION_MS = 1500L
     const val RIDING_MAX_DURATION_MS = 3500L
     const val RIDING_TRIGGER_DISTANCE_PX = 15.0

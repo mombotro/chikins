@@ -76,9 +76,11 @@ class ChickEntity(
             return
         }
 
+        val seconds = deltaMs / 1000.0
+
         if (isRiding) {
             ridingRemainingMs -= deltaMs
-            if (ridingRemainingMs <= 0 || rng.nextDouble() < ChickConfig.RIDING_STOP_CHANCE) {
+            if (ridingRemainingMs <= 0 || rng.nextDouble() < ChickConfig.RIDING_STOP_CHANCE * seconds) {
                 stopRiding(screenWidthPx, screenHeightPx)
             } else {
                 x = parentX + 2.0
@@ -93,7 +95,7 @@ class ChickEntity(
         val dy = parentY - y
         val distance = kotlin.math.sqrt(dx * dx + dy * dy)
 
-        if (distance <= ChickConfig.RIDING_TRIGGER_DISTANCE_PX && rng.nextDouble() < ChickConfig.RIDING_CHANCE) {
+        if (distance <= ChickConfig.RIDING_TRIGGER_DISTANCE_PX && rng.nextDouble() < ChickConfig.RIDING_CHANCE * seconds) {
             isRiding = true
             ridingRemainingMs = ChickConfig.RIDING_MIN_DURATION_MS +
                 (rng.nextDouble() * (ChickConfig.RIDING_MAX_DURATION_MS - ChickConfig.RIDING_MIN_DURATION_MS)).toLong()
@@ -129,14 +131,16 @@ class ChickEntity(
             return
         }
 
-        if (rng.nextDouble() < ChickConfig.PECK_CHANCE) {
+        val seconds = deltaMs / 1000.0
+
+        if (rng.nextDouble() < ChickConfig.PECK_CHANCE * seconds) {
             isPecking = true
             peckRemainingMs = ChickConfig.PECK_DURATION_MS
             animState = ChickAnimState.PECKING
             return
         }
 
-        if (rng.nextDouble() < 0.01) {
+        if (rng.nextDouble() < ChickConfig.WANDER_DIRECTION_CHANGE_CHANCE * seconds) {
             velocityX = (rng.nextDouble() - 0.5) * ChickConfig.WANDER_SPEED
             velocityY = (rng.nextDouble() - 0.5) * ChickConfig.WANDER_SPEED
         }

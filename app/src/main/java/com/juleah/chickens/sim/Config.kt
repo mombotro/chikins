@@ -17,6 +17,8 @@ object ChickenConfig {
     const val IDLE_MIN_DURATION_MS = 1000L
     const val IDLE_MAX_DURATION_MS = 5000L
     const val JUMP_DURATION_MS = 800L
+    const val JUMP_HEIGHT_PX = 60.0
+    const val JUMP_DISTANCE_PX = 40.0
     const val EGG_LAY_CHANCE = 0.0001
     const val EGG_COOLDOWN_MS = 30000L
     const val EGG_SIT_CHANCE = 0.01

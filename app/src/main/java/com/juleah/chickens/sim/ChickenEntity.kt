@@ -26,7 +26,10 @@ class ChickenEntity(
     private var isPecking = false
     private var peckRemainingMs = 0L
     private var isJumping = false
-    private var jumpRemainingMs = 0L
+    private var jumpProgress = 0.0
+    private var jumpStartX = 0.0
+    private var jumpStartY = 0.0
+    private var jumpFacingRight = true
     private var feedPeckRemainingMs = 0L
     private var targetFeedId: Long? = null
 
@@ -74,10 +77,25 @@ class ChickenEntity(
         advanceAnimation(deltaMs)
 
         if (isJumping) {
-            jumpRemainingMs -= deltaMs
-            if (jumpRemainingMs <= 0) {
+            jumpProgress += deltaMs.toDouble() / ChickenConfig.JUMP_DURATION_MS
+            val size = ChickenConfig.SIZE_PX
+
+            if (jumpProgress >= 1.0) {
                 isJumping = false
+                jumpProgress = 0.0
+                x = jumpStartX + (if (jumpFacingRight) ChickenConfig.JUMP_DISTANCE_PX else -ChickenConfig.JUMP_DISTANCE_PX)
+                y = jumpStartY
+                x = x.coerceIn(0.0, screenWidthPx - size)
                 animState = movingAnimState()
+            } else {
+                // sin(progress*PI) rises from 0 to 1 and back to 0 across the jump,
+                // so height eases to zero velocity at the apex (slow at the top,
+                // fast at takeoff/landing) rather than moving at a constant rate.
+                val height = ChickenConfig.JUMP_HEIGHT_PX * kotlin.math.sin(jumpProgress * Math.PI)
+                val horizontalOffset = ChickenConfig.JUMP_DISTANCE_PX * jumpProgress *
+                    (if (jumpFacingRight) 1.0 else -1.0)
+                x = (jumpStartX + horizontalOffset).coerceIn(0.0, screenWidthPx - size)
+                y = (jumpStartY - height).coerceIn(0.0, screenHeightPx - size)
             }
             return
         }
@@ -143,7 +161,10 @@ class ChickenEntity(
     fun jump() {
         if (isJumping || isPecking) return
         isJumping = true
-        jumpRemainingMs = ChickenConfig.JUMP_DURATION_MS
+        jumpProgress = 0.0
+        jumpStartX = x
+        jumpStartY = y
+        jumpFacingRight = facingRight
         animState = ChickenAnimState.JUMPING
     }
 

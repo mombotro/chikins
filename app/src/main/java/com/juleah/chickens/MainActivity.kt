@@ -2,6 +2,7 @@ package com.juleah.chickens
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
@@ -23,6 +24,10 @@ class MainActivity : Activity() {
 
         statusText = findViewById(R.id.statusText)
         toggleButton = findViewById(R.id.toggleButton)
+
+        val sillyTypeface = Typeface.createFromAsset(assets, "fonts/silly.ttf")
+        statusText.typeface = sillyTypeface
+        toggleButton.typeface = sillyTypeface
 
         toggleButton.setOnClickListener {
             if (isServiceRunning) stopOverlay() else startOverlayOrRequestPermission()

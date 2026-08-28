@@ -1,6 +1,6 @@
 package com.juleah.chickens.sim
 
-enum class ChickAnimState { IDLE, WALKING, RUNNING }
+enum class ChickAnimState { IDLE, WALKING, RUNNING, PECKING, RIDING }
 
 class ChickEntity(
     val id: Long,
@@ -23,6 +23,10 @@ class ChickEntity(
     private var velocityY: Double = 0.0
     private var isRunningAway = false
     private var runAwayRemainingMs = 0L
+    private var isPecking = false
+    private var peckRemainingMs = 0L
+    private var isRiding = false
+    private var ridingRemainingMs = 0L
 
     private var lastAnimState = ChickAnimState.IDLE
     private var animFrameIndex = 0
@@ -42,12 +46,29 @@ class ChickEntity(
         return frames[animFrameIndex % frames.size]
     }
 
+    /** Tap handling: dismount if riding, otherwise run away, matching mombotro. */
+    fun handleTap() {
+        if (isRiding) {
+            isRiding = false
+            animState = ChickAnimState.IDLE
+        } else {
+            runAway()
+        }
+    }
+
     fun runAway() {
         isRunningAway = true
         runAwayRemainingMs = ChickConfig.RUN_AWAY_DURATION_MS
     }
 
-    fun followParent(deltaMs: Long, parentX: Double, parentY: Double, screenWidthPx: Double, screenHeightPx: Double) {
+    fun followParent(
+        deltaMs: Long,
+        parentX: Double,
+        parentY: Double,
+        parentFacingRight: Boolean,
+        screenWidthPx: Double,
+        screenHeightPx: Double
+    ) {
         advanceAnimation(deltaMs)
 
         if (isRunningAway) {
@@ -55,9 +76,30 @@ class ChickEntity(
             return
         }
 
+        if (isRiding) {
+            ridingRemainingMs -= deltaMs
+            if (ridingRemainingMs <= 0 || rng.nextDouble() < ChickConfig.RIDING_STOP_CHANCE) {
+                stopRiding(screenWidthPx, screenHeightPx)
+            } else {
+                x = parentX + 2.0
+                y = parentY - 8.0
+                facingRight = parentFacingRight
+                animState = ChickAnimState.RIDING
+                return
+            }
+        }
+
         val dx = parentX - x
         val dy = parentY - y
         val distance = kotlin.math.sqrt(dx * dx + dy * dy)
+
+        if (distance <= ChickConfig.RIDING_TRIGGER_DISTANCE_PX && rng.nextDouble() < ChickConfig.RIDING_CHANCE) {
+            isRiding = true
+            ridingRemainingMs = ChickConfig.RIDING_MIN_DURATION_MS +
+                (rng.nextDouble() * (ChickConfig.RIDING_MAX_DURATION_MS - ChickConfig.RIDING_MIN_DURATION_MS)).toLong()
+            animState = ChickAnimState.RIDING
+            return
+        }
 
         if (distance <= ChickConfig.FOLLOW_PARENT_DISTANCE_PX) {
             animState = ChickAnimState.IDLE
@@ -78,16 +120,38 @@ class ChickEntity(
             return
         }
 
+        if (isPecking) {
+            peckRemainingMs -= deltaMs
+            if (peckRemainingMs <= 0) {
+                isPecking = false
+                animState = movingAnimState()
+            }
+            return
+        }
+
+        if (rng.nextDouble() < ChickConfig.PECK_CHANCE) {
+            isPecking = true
+            peckRemainingMs = ChickConfig.PECK_DURATION_MS
+            animState = ChickAnimState.PECKING
+            return
+        }
+
         if (rng.nextDouble() < 0.01) {
             velocityX = (rng.nextDouble() - 0.5) * ChickConfig.WANDER_SPEED
             velocityY = (rng.nextDouble() - 0.5) * ChickConfig.WANDER_SPEED
         }
         move(deltaMs, screenWidthPx, screenHeightPx)
-        animState = if (kotlin.math.abs(velocityX) + kotlin.math.abs(velocityY) > ChickConfig.MOVING_SPEED_THRESHOLD) {
-            ChickAnimState.WALKING
-        } else {
-            ChickAnimState.IDLE
-        }
+        animState = movingAnimState()
+    }
+
+    private fun stopRiding(screenWidthPx: Double, screenHeightPx: Double) {
+        isRiding = false
+        x += (rng.nextDouble() - 0.5) * 20.0
+        y += (rng.nextDouble() - 0.5) * 20.0
+        val size = ChickConfig.SIZE_PX
+        x = x.coerceIn(0.0, screenWidthPx - size)
+        y = y.coerceIn(0.0, screenHeightPx - size)
+        animState = ChickAnimState.IDLE
     }
 
     private fun runFree(deltaMs: Long, screenWidthPx: Double, screenHeightPx: Double) {
@@ -124,6 +188,13 @@ class ChickEntity(
         }
     }
 
+    private fun movingAnimState(): ChickAnimState =
+        if (kotlin.math.abs(velocityX) + kotlin.math.abs(velocityY) > ChickConfig.MOVING_SPEED_THRESHOLD) {
+            ChickAnimState.WALKING
+        } else {
+            ChickAnimState.IDLE
+        }
+
     private fun advanceAnimation(deltaMs: Long) {
         if (animState != lastAnimState) {
             lastAnimState = animState
@@ -143,11 +214,15 @@ class ChickEntity(
         ChickAnimState.IDLE -> ChickConfig.IDLE_FRAMES
         ChickAnimState.WALKING -> ChickConfig.WALKING_FRAMES
         ChickAnimState.RUNNING -> ChickConfig.RUNNING_FRAMES
+        ChickAnimState.PECKING -> ChickConfig.PECKING_FRAMES
+        ChickAnimState.RIDING -> ChickConfig.RIDING_FRAMES
     }
 
     private fun speedFor(state: ChickAnimState): Long = when (state) {
         ChickAnimState.IDLE -> ChickConfig.IDLE_FRAME_SPEED_MS
         ChickAnimState.WALKING -> ChickConfig.WALKING_FRAME_SPEED_MS
         ChickAnimState.RUNNING -> ChickConfig.RUNNING_FRAME_SPEED_MS
+        ChickAnimState.PECKING -> ChickConfig.PECKING_FRAME_SPEED_MS
+        ChickAnimState.RIDING -> ChickConfig.RIDING_FRAME_SPEED_MS
     }
 }

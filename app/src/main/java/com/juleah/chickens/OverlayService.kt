@@ -78,7 +78,7 @@ class OverlayService : Service() {
             flock.chicks.forEach { chick ->
                 val parent = chick.parentId?.let { pid -> flock.chickens.find { it.id == pid } }
                 if (parent != null) {
-                    chick.followParent(deltaMs, parent.x, parent.y, screenWidthPx, screenHeightPx)
+                    chick.followParent(deltaMs, parent.x, parent.y, parent.facingRight, screenWidthPx, screenHeightPx)
                 } else {
                     chick.wanderAlone(deltaMs, screenWidthPx, screenHeightPx)
                 }

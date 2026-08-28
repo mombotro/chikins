@@ -52,13 +52,28 @@ object ChickConfig {
     const val FOLLOW_PARENT_DISTANCE_PX = 40.0
     const val MOVING_SPEED_THRESHOLD = 5.0
 
-    // Frame indices/speeds matching chick.png: 0-1 idle, 2-3 walk/run.
+    const val PECK_CHANCE = 0.005
+    const val PECK_DURATION_MS = 600L
+
+    // Riding on the parent chicken's back, ported from mombotro's chick.js.
+    const val RIDING_CHANCE = 0.003
+    const val RIDING_STOP_CHANCE = 0.002
+    const val RIDING_MIN_DURATION_MS = 1500L
+    const val RIDING_MAX_DURATION_MS = 3500L
+    const val RIDING_TRIGGER_DISTANCE_PX = 15.0
+
+    // Frame indices/speeds matching chick.png: 0-1 idle, 2-3 walk, 4-5 peck.
+    // Riding reuses idle frame 1 (sitting still), same as mombotro.
     val IDLE_FRAMES = intArrayOf(0, 1)
     const val IDLE_FRAME_SPEED_MS = 500L
     val WALKING_FRAMES = intArrayOf(2, 3)
     const val WALKING_FRAME_SPEED_MS = 150L
     val RUNNING_FRAMES = intArrayOf(2, 3)
     const val RUNNING_FRAME_SPEED_MS = 100L
+    val PECKING_FRAMES = intArrayOf(4, 5)
+    const val PECKING_FRAME_SPEED_MS = 300L
+    val RIDING_FRAMES = intArrayOf(1)
+    const val RIDING_FRAME_SPEED_MS = 1000L
 }
 
 object EggConfig {

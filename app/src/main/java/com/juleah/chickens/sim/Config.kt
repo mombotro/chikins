@@ -2,8 +2,14 @@ package com.juleah.chickens.sim
 
 object ChickenConfig {
     const val SIZE_PX = 32
-    const val MIN_VELOCITY = 0.5
-    const val MAX_VELOCITY = 2.0
+
+    // Velocity is in px/second (not px/tick) so movement speed is independent
+    // of the actual tick rate the device achieves.
+    const val MIN_VELOCITY = 15.0
+    const val MAX_VELOCITY = 90.0
+    const val MOVING_SPEED_THRESHOLD = 5.0
+    const val FEED_APPROACH_SPEED = 100.0
+
     const val DIRECTION_CHANGE_CHANCE = 0.01
     const val PECK_CHANCE = 0.005
     const val PECK_DURATION_MS = 600L
@@ -17,6 +23,20 @@ object ChickenConfig {
     const val EGG_SIT_DISTANCE_PX = 30.0
     const val MIN_LIFESPAN_MS = 5 * 60_000L
     const val MAX_LIFESPAN_MS = 15 * 60_000L
+
+    // Frame indices and per-frame display duration for each animation state,
+    // matching the chicken.png spritesheet layout: 0-1 idle, 2-5 walk, 6-7
+    // peck, 8-9 jump, 10 nesting/sitting.
+    val IDLE_FRAMES = intArrayOf(0, 1)
+    const val IDLE_FRAME_SPEED_MS = 500L
+    val WALKING_FRAMES = intArrayOf(2, 3, 4, 5)
+    const val WALKING_FRAME_SPEED_MS = 150L
+    val PECKING_FRAMES = intArrayOf(6, 7)
+    const val PECKING_FRAME_SPEED_MS = 300L
+    val JUMPING_FRAMES = intArrayOf(8, 9)
+    const val JUMPING_FRAME_SPEED_MS = 100L
+    val SITTING_FRAMES = intArrayOf(10)
+    const val SITTING_FRAME_SPEED_MS = 1000L
 }
 
 object ChickConfig {

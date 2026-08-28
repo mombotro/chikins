@@ -21,9 +21,11 @@ class OverlayRenderer(
 
         flock.chickens.forEach { chicken ->
             val view = chickenViews.getOrPut(chicken.id) {
-                EntityView(context, windowManager, ChickenConfig.SIZE_PX)
+                EntityView(context, windowManager, ChickenConfig.SIZE_PX).also {
+                    it.imageView.setOnClickListener { _ -> chicken.jump() }
+                }
             }
-            view.imageView.setImageBitmap(chickenSprite.frame(0))
+            view.imageView.setImageBitmap(chickenSprite.frame(chicken.currentSpriteFrame()))
             view.show(chicken.x, chicken.y)
         }
     }

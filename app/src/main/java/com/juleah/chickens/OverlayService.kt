@@ -38,11 +38,25 @@ class OverlayService : Service() {
     private lateinit var renderer: OverlayRenderer
     private val tickHandler = Handler(Looper.getMainLooper())
     private var isRunning = false
+    private var lastTickElapsedRealtimeMs = 0L
 
     private val tickRunnable = object : Runnable {
         override fun run() {
+            val now = android.os.SystemClock.elapsedRealtime()
+            val deltaMs = if (lastTickElapsedRealtimeMs == 0L) {
+                TICK_INTERVAL_MS
+            } else {
+                (now - lastTickElapsedRealtimeMs).coerceAtMost(200L)
+            }
+            lastTickElapsedRealtimeMs = now
+
             flock.tick()
-            Log.d(TAG, "population=${flock.populationCount()}")
+            Log.d(TAG, "population=${flock.populationCount()} deltaMs=$deltaMs")
+
+            flock.chickens.forEach { chicken ->
+                chicken.wander(deltaMs, screenWidthPx, screenHeightPx)
+            }
+
             renderer.render(flock)
             if (isRunning) {
                 tickHandler.postDelayed(this, TICK_INTERVAL_MS)

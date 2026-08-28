@@ -3,8 +3,10 @@ package com.juleah.chickens
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -29,6 +31,7 @@ class OverlayService : Service() {
         private const val NOTIFICATION_CHANNEL_ID = "chickens_overlay"
         private const val NOTIFICATION_ID = 1
         const val TICK_INTERVAL_MS = 33L // ~30fps
+        private const val ACTION_CULL = "com.juleah.chickens.ACTION_CULL"
 
         /** Same-process reference so MainActivity can reach the live Flock (e.g. "kill all but one") while running. */
         var instance: OverlayService? = null
@@ -181,6 +184,9 @@ class OverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_CULL) {
+            flock.killAllButOne()
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForeground(NOTIFICATION_ID, buildNotification())
         }
@@ -211,9 +217,28 @@ class OverlayService : Service() {
             NotificationManager.IMPORTANCE_MIN
         )
         manager.createNotificationChannel(channel)
+
+        val cullIntent = Intent(this, OverlayService::class.java).setAction(ACTION_CULL)
+        val cullPendingIntent = PendingIntent.getService(
+            this,
+            0,
+            cullIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // buildNotification() is only ever called from the API26+ branch in
+        // onStartCommand, so the Icon-based Action builder (API23+) is safe here
+        // despite this project's minSdk being 19.
+        val cullAction = Notification.Action.Builder(
+            Icon.createWithResource(this, android.R.drawable.ic_menu_delete),
+            getString(R.string.kill_all_but_one),
+            cullPendingIntent
+        ).build()
+
         return Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle(getString(R.string.status_running))
             .setSmallIcon(android.R.drawable.ic_menu_today)
+            .addAction(cullAction)
             .build()
     }
 }

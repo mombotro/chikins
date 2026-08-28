@@ -102,7 +102,9 @@ class OverlayService : Service() {
                         }
                     }
                     flock.maybeSitOnEgg(chicken, deltaMs)
-                    flock.maybeLayEgg(chicken, deltaMs)
+                    if (flock.maybeLayEgg(chicken, deltaMs) != null) {
+                        Log.d(TAG, "chicken ${chicken.id} laid an egg")
+                    }
                 }
             }
 

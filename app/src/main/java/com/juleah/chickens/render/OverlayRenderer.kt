@@ -17,7 +17,6 @@ class OverlayRenderer(
     private val chickenSprite = SpriteSheet(context, R.drawable.chicken, ChickenConfig.SIZE_PX)
     private val chickenViews = mutableMapOf<Long, EntityView>()
     private val sittingChickenIds = mutableSetOf<Long>()
-    private val peckingChickenIds = mutableSetOf<Long>()
 
     private val chickSprite = SpriteSheet(context, R.drawable.chick, ChickConfig.SIZE_PX)
     private val chickViews = mutableMapOf<Long, EntityView>()
@@ -51,15 +50,14 @@ class OverlayRenderer(
                 sittingChickenIds.remove(chicken.id)
             }
 
-            val isPeckingNow = chicken.animState == ChickenAnimState.PECKING
-            if (isPeckingNow && peckingChickenIds.add(chicken.id)) {
-                // Same reasoning as sitting, above: feed piles are also added
-                // after chickens exist, so without this the feed would render
-                // in front of a chicken pecking at it.
-                view.bringToFront()
-            } else if (!isPeckingNow) {
-                peckingChickenIds.remove(chicken.id)
-            }
+            // Pecking at feed has the same z-order issue as sitting on an egg
+            // (the feed pile's window is added later, so it would render on
+            // top by default), but bringToFront() does a removeView+addView,
+            // which makes the window vanish for a frame. Sitting is rare
+            // enough that the one-time flicker is acceptable; pecking is
+            // frequent (PECK_CHANCE rolls constantly), so the same fix there
+            // reads as a constant flicker instead. Left unfixed - feed may
+            // occasionally render above a pecking chicken.
 
             view.imageView.setImageBitmap(chickenSprite.frame(chicken.currentSpriteFrame()))
             view.imageView.scaleX = if (chicken.facingRight) -1f else 1f

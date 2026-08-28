@@ -9,4 +9,5 @@
     <string name="kill_all_but_one">cull all but one chikin</string>
     <string name="max_chikins_label">max chikins</string>
     <string name="show_feed_bag">show feed bag</string>
+    <string name="spawn_test_chick">spawn test chick</string>
 </resources>

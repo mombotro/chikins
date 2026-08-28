@@ -28,7 +28,10 @@ object ChickenConfig {
     const val JUMP_DURATION_MS = 800L
     const val JUMP_HEIGHT_PX = 60.0
     const val JUMP_DISTANCE_PX = 40.0
-    const val EGG_LAY_CHANCE = 0.006
+    // Was 0.006 (mean wait ~166s per chicken) - bumped for faster feedback,
+    // matching how much everything else in this app got sped up this
+    // session (sitting time, growth time). Mean wait now ~50s.
+    const val EGG_LAY_CHANCE = 0.02
     const val EGG_COOLDOWN_MS = 30000L
     const val EGG_SIT_CHANCE = 0.6
     const val EGG_SIT_DISTANCE_PX = 30.0

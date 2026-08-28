@@ -67,6 +67,14 @@
             android:checked="true"
             android:text="@string/show_feed_bag" />
 
+        <Button
+            android:id="@+id/spawnTestChickButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textAllCaps="false"
+            android:text="@string/spawn_test_chick" />
+
     </LinearLayout>
 
 </RelativeLayout>

@@ -13,6 +13,8 @@ class Flock(
     private var nextId: Long = 0L
     private fun newId(): Long = nextId++
 
+    private val lastEggTimeByChickenId = mutableMapOf<Long, Long>()
+
     fun populationCount(): Int = chickens.size + chicks.size
 
     fun canLayEgg(): Boolean =
@@ -38,6 +40,33 @@ class Flock(
         val egg = EggEntity(id = newId(), x = x, y = y, laidByChickenId = chickenId, rng = rng)
         eggs.add(egg)
         return egg
+    }
+
+    fun maybeLayEgg(chicken: ChickenEntity): EggEntity? {
+        if (!canLayEgg()) return null
+        val now = clock.nowMs()
+        val last = lastEggTimeByChickenId[chicken.id] ?: 0L
+        if (now - last < ChickenConfig.EGG_COOLDOWN_MS) return null
+        if (rng.nextDouble() >= ChickenConfig.EGG_LAY_CHANCE) return null
+        lastEggTimeByChickenId[chicken.id] = now
+        return layEgg(chicken.id, chicken.x, chicken.y)
+    }
+
+    fun maybeSitOnEgg(chicken: ChickenEntity): EggEntity? {
+        val candidate = eggs.find { egg ->
+            egg.state == EggState.WAITING &&
+                egg.sittingChickenIdOrNull() == null &&
+                distanceBetween(chicken.x, chicken.y, egg.x, egg.y) <= ChickenConfig.EGG_SIT_DISTANCE_PX
+        } ?: return null
+        if (rng.nextDouble() >= ChickenConfig.EGG_SIT_CHANCE) return null
+        candidate.startSitting(chicken.id, clock.nowMs())
+        return candidate
+    }
+
+    private fun distanceBetween(x1: Double, y1: Double, x2: Double, y2: Double): Double {
+        val dx = x1 - x2
+        val dy = y1 - y2
+        return kotlin.math.sqrt(dx * dx + dy * dy)
     }
 
     fun eggsReadyToHatch(): List<EggEntity> = eggs.filter { it.state == EggState.HATCHING }

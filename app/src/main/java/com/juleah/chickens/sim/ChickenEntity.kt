@@ -48,8 +48,26 @@ class ChickenEntity(
         isPecking = false
     }
 
-    /** Actual sprite-sheet frame index for the current animation state/timing. */
-    fun currentSpriteFrame(): Int = framesFor(animState)[animFrameIndex]
+    /**
+     * Actual sprite-sheet frame index for the current animation state/timing.
+     * Indexed modulo the current state's frame count: wander() can change
+     * animState after advanceAnimation() already ran this call (e.g. the
+     * peck/idle-chance branches), leaving animFrameIndex sized for the
+     * *previous* state's (possibly larger) frame array until the next
+     * advanceAnimation() call catches up and resets it.
+     */
+    fun currentSpriteFrame(): Int {
+        val frames = framesFor(animState)
+        return frames[animFrameIndex % frames.size]
+    }
+
+    /** Called instead of wander() while this chicken is sitting on an egg. */
+    fun holdSittingPose(eggX: Double, eggY: Double, deltaMs: Long) {
+        x = eggX
+        y = eggY
+        animState = ChickenAnimState.SITTING
+        advanceAnimation(deltaMs)
+    }
 
     /** Ported from mombotro's chicken.js wander(), with time-based (not tick-based) movement. */
     fun wander(deltaMs: Long, screenWidthPx: Double, screenHeightPx: Double) {

@@ -13,6 +13,7 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
 import com.juleah.chickens.render.OverlayRenderer
+import com.juleah.chickens.sim.EggState
 import com.juleah.chickens.sim.Flock
 import com.juleah.chickens.sim.RandomRng
 import com.juleah.chickens.sim.SystemClock
@@ -43,18 +44,35 @@ class OverlayService : Service() {
     private val tickRunnable = object : Runnable {
         override fun run() {
             val now = android.os.SystemClock.elapsedRealtime()
+            // Real tick cost regularly runs 150-450ms on real hardware (WindowManager
+            // view updates dominate), well above the 33ms target, so the clamp ceiling
+            // must sit well above normal operating range or slower devices get their
+            // movement silently under-credited. It exists only to bound truly abnormal
+            // pauses (e.g. screen off for a while), not to model expected tick cost.
             val deltaMs = if (lastTickElapsedRealtimeMs == 0L) {
                 TICK_INTERVAL_MS
             } else {
-                (now - lastTickElapsedRealtimeMs).coerceAtMost(200L)
+                (now - lastTickElapsedRealtimeMs).coerceAtMost(2000L)
             }
             lastTickElapsedRealtimeMs = now
 
             flock.tick()
             Log.d(TAG, "population=${flock.populationCount()} deltaMs=$deltaMs")
 
+            val sittingEggByChickenId = flock.eggs
+                .filter { it.state == EggState.SITTING }
+                .mapNotNull { egg -> egg.sittingChickenIdOrNull()?.let { it to egg } }
+                .toMap()
+
             flock.chickens.forEach { chicken ->
-                chicken.wander(deltaMs, screenWidthPx, screenHeightPx)
+                val sittingEgg = sittingEggByChickenId[chicken.id]
+                if (sittingEgg != null) {
+                    chicken.holdSittingPose(sittingEgg.x, sittingEgg.y, deltaMs)
+                } else {
+                    chicken.wander(deltaMs, screenWidthPx, screenHeightPx)
+                    flock.maybeSitOnEgg(chicken)
+                    flock.maybeLayEgg(chicken)
+                }
             }
 
             flock.chicks.forEach { chick ->
@@ -65,6 +83,8 @@ class OverlayService : Service() {
                     chick.wanderAlone(deltaMs, screenWidthPx, screenHeightPx)
                 }
             }
+
+            flock.eggsReadyToHatch().forEach { egg -> flock.confirmHatch(egg.id) }
 
             renderer.render(flock)
             if (isRunning) {

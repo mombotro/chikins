@@ -5,6 +5,8 @@ import android.view.WindowManager
 import com.juleah.chickens.R
 import com.juleah.chickens.sim.ChickConfig
 import com.juleah.chickens.sim.ChickenConfig
+import com.juleah.chickens.sim.EggConfig
+import com.juleah.chickens.sim.EggState
 import com.juleah.chickens.sim.Flock
 
 class OverlayRenderer(
@@ -16,6 +18,9 @@ class OverlayRenderer(
 
     private val chickSprite = SpriteSheet(context, R.drawable.chick, ChickConfig.SIZE_PX)
     private val chickViews = mutableMapOf<Long, EntityView>()
+
+    private val eggSprite = SpriteSheet(context, R.drawable.egg, EggConfig.SIZE_PX)
+    private val eggViews = mutableMapOf<Long, EntityView>()
 
     fun render(flock: Flock) {
         val liveIds = flock.chickens.map { it.id }.toSet()
@@ -30,6 +35,7 @@ class OverlayRenderer(
                 }
             }
             view.imageView.setImageBitmap(chickenSprite.frame(chicken.currentSpriteFrame()))
+            view.imageView.scaleX = if (chicken.facingRight) -1f else 1f
             view.show(chicken.x, chicken.y)
         }
 
@@ -45,7 +51,22 @@ class OverlayRenderer(
                 }
             }
             view.imageView.setImageBitmap(chickSprite.frame(chick.currentSpriteFrame()))
+            view.imageView.scaleX = if (chick.facingRight) -1f else 1f
             view.show(chick.x, chick.y)
+        }
+
+        val liveEggIds = flock.eggs.map { it.id }.toSet()
+        eggViews.keys.filterNot { it in liveEggIds }.forEach { staleId ->
+            eggViews.remove(staleId)?.remove()
+        }
+
+        flock.eggs.forEach { egg ->
+            val view = eggViews.getOrPut(egg.id) {
+                EntityView(context, windowManager, EggConfig.SIZE_PX)
+            }
+            val frameIndex = if (egg.state == EggState.HATCHING) 1 else 0
+            view.imageView.setImageBitmap(eggSprite.frame(frameIndex))
+            view.show(egg.x, egg.y)
         }
     }
 
@@ -54,5 +75,7 @@ class OverlayRenderer(
         chickenViews.clear()
         chickViews.values.forEach { it.remove() }
         chickViews.clear()
+        eggViews.values.forEach { it.remove() }
+        eggViews.clear()
     }
 }

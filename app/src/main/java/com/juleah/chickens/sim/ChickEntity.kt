@@ -37,7 +37,10 @@ class ChickEntity(
     fun toChicken(nowMs: Long, rng: Rng): ChickenEntity =
         ChickenEntity(id = id, x = x, y = y, birthTimeMs = nowMs, rng = rng)
 
-    fun currentSpriteFrame(): Int = framesFor(animState)[animFrameIndex]
+    fun currentSpriteFrame(): Int {
+        val frames = framesFor(animState)
+        return frames[animFrameIndex % frames.size]
+    }
 
     fun runAway() {
         isRunningAway = true

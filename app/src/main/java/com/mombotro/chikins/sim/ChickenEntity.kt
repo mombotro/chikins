@@ -1,0 +1,267 @@
+package com.mombotro.chikins.sim
+
+enum class ChickenAnimState { IDLE, WALKING, PECKING, JUMPING, SITTING }
+
+class ChickenEntity(
+    val id: Long,
+    var x: Double,
+    var y: Double,
+    birthTimeMs: Long,
+    private val rng: Rng
+) {
+    val deathAtMs: Long = birthTimeMs + rng.nextLongInRange(ChickenConfig.MIN_LIFESPAN_MS, ChickenConfig.MAX_LIFESPAN_MS)
+    var isDead: Boolean = false
+        private set
+
+    /**
+     * Resets the frame index/timer the instant the state actually changes,
+     * not on the next advanceAnimation() call. Without this, a method that
+     * sets animState after advanceAnimation() already ran this tick (e.g.
+     * wander()'s peck/idle-chance branches) would render one frame picked
+     * from the *previous* state's frame count against the *new* state's
+     * array - a visible one-tick glitch between e.g. walking and pecking.
+     */
+    var animState: ChickenAnimState = ChickenAnimState.IDLE
+        private set(value) {
+            if (field != value) {
+                animFrameIndex = 0
+                animFrameTimeMs = 0L
+            }
+            field = value
+        }
+    var facingRight: Boolean = true
+        private set
+
+    private var velocityX: Double = (rng.nextDouble() - 0.5) * ChickenConfig.MAX_VELOCITY
+    private var velocityY: Double = (rng.nextDouble() - 0.5) * ChickenConfig.MAX_VELOCITY
+
+    private var isIdling = false
+    private var idleRemainingMs = 0L
+    private var isPecking = false
+    private var peckRemainingMs = 0L
+    private var isJumping = false
+    private var jumpProgress = 0.0
+    private var jumpStartX = 0.0
+    private var jumpStartY = 0.0
+    private var jumpFacingRight = true
+    private var feedPeckRemainingMs = 0L
+    private var targetFeedId: Long? = null
+
+    private var animFrameIndex = 0
+    private var animFrameTimeMs = 0L
+
+    fun tick(nowMs: Long) {
+        if (nowMs >= deathAtMs) {
+            isDead = true
+        }
+    }
+
+    fun currentTargetFeedId(): Long? = targetFeedId
+    fun clearTargetFeed() { targetFeedId = null }
+    fun rushToFeed(feedId: Long) {
+        targetFeedId = feedId
+        isIdling = false
+        isPecking = false
+    }
+
+    /**
+     * Actual sprite-sheet frame index for the current animation state/timing.
+     * Indexed modulo the current state's frame count as a defensive safety
+     * net (the animState setter above is what actually keeps this in sync).
+     */
+    fun currentSpriteFrame(): Int {
+        val frames = framesFor(animState)
+        return frames[animFrameIndex % frames.size]
+    }
+
+    /**
+     * Called instead of wander() while this chicken is sitting on an egg.
+     * Centers the (larger) chicken sprite over the egg's center rather than
+     * matching top-left corners, which put the egg in the chicken's
+     * upper-left quadrant instead of underneath it.
+     */
+    fun holdSittingPose(eggX: Double, eggY: Double, deltaMs: Long) {
+        val centeringOffset = (ChickenConfig.SIZE_PX - EggConfig.SIZE_PX) / 2.0
+        x = eggX - centeringOffset
+        y = eggY - centeringOffset
+        animState = ChickenAnimState.SITTING
+        advanceAnimation(deltaMs)
+    }
+
+    /** Ported from mombotro's chicken.js wander(), with time-based (not tick-based) movement. */
+    fun wander(deltaMs: Long, screenWidthPx: Double, screenHeightPx: Double) {
+        advanceAnimation(deltaMs)
+
+        if (updateJump(deltaMs, screenWidthPx, screenHeightPx)) return
+
+        if (isPecking) {
+            peckRemainingMs -= deltaMs
+            if (peckRemainingMs <= 0) {
+                isPecking = false
+                animState = movingAnimState()
+            }
+            return
+        }
+
+        if (isIdling) {
+            idleRemainingMs -= deltaMs
+            if (idleRemainingMs <= 0) {
+                isIdling = false
+                velocityX = (rng.nextDouble() - 0.5) * ChickenConfig.MAX_VELOCITY
+                velocityY = (rng.nextDouble() - 0.5) * ChickenConfig.MAX_VELOCITY
+            } else {
+                return
+            }
+        }
+
+        val seconds = deltaMs / 1000.0
+
+        if (rng.nextDouble() < ChickenConfig.DIRECTION_CHANGE_CHANCE * seconds) {
+            velocityX = (rng.nextDouble() - 0.5) * ChickenConfig.MAX_VELOCITY
+            velocityY = (rng.nextDouble() - 0.5) * ChickenConfig.MAX_VELOCITY
+        }
+
+        if (rng.nextDouble() < ChickenConfig.PECK_CHANCE * seconds) {
+            isPecking = true
+            peckRemainingMs = ChickenConfig.PECK_DURATION_MS
+            animState = ChickenAnimState.PECKING
+            return
+        }
+
+        if (rng.nextDouble() < ChickenConfig.IDLE_CHANCE * seconds) {
+            isIdling = true
+            idleRemainingMs = ChickenConfig.IDLE_MIN_DURATION_MS +
+                (rng.nextDouble() * (ChickenConfig.IDLE_MAX_DURATION_MS - ChickenConfig.IDLE_MIN_DURATION_MS)).toLong()
+            animState = ChickenAnimState.IDLE
+            return
+        }
+
+        x += velocityX * seconds
+        y += velocityY * seconds
+        facingRight = velocityX > 0.1
+
+        val size = ChickenConfig.SIZE_PX
+        if (x <= 0 || x >= screenWidthPx - size) {
+            velocityX = -velocityX
+            x = x.coerceIn(0.0, screenWidthPx - size)
+        }
+        if (y <= 0 || y >= screenHeightPx - size) {
+            velocityY = -velocityY
+            y = y.coerceIn(0.0, screenHeightPx - size)
+        }
+
+        animState = movingAnimState()
+    }
+
+    /** Tapping interrupts whatever the chicken is doing - including feed-seeking/pecking - into a jump; resumes afterward. */
+    fun jump() {
+        if (isJumping) return
+        isJumping = true
+        jumpProgress = 0.0
+        jumpStartX = x
+        jumpStartY = y
+        jumpFacingRight = facingRight
+        isPecking = false
+        peckRemainingMs = 0L
+        feedPeckRemainingMs = 0L
+        animState = ChickenAnimState.JUMPING
+    }
+
+    /** Shared by wander() and moveTowardFeed() so a jump interrupts either and both resume their own logic afterward. */
+    private fun updateJump(deltaMs: Long, screenWidthPx: Double, screenHeightPx: Double): Boolean {
+        if (!isJumping) return false
+
+        jumpProgress += deltaMs.toDouble() / ChickenConfig.JUMP_DURATION_MS
+        val size = ChickenConfig.SIZE_PX
+
+        if (jumpProgress >= 1.0) {
+            isJumping = false
+            jumpProgress = 0.0
+            x = jumpStartX + (if (jumpFacingRight) ChickenConfig.JUMP_DISTANCE_PX else -ChickenConfig.JUMP_DISTANCE_PX)
+            y = jumpStartY
+            x = x.coerceIn(0.0, screenWidthPx - size)
+            animState = movingAnimState()
+        } else {
+            // sin(progress*PI) rises from 0 to 1 and back to 0 across the jump,
+            // so height eases to zero velocity at the apex (slow at the top,
+            // fast at takeoff/landing) rather than moving at a constant rate.
+            val height = ChickenConfig.JUMP_HEIGHT_PX * kotlin.math.sin(jumpProgress * Math.PI)
+            val horizontalOffset = ChickenConfig.JUMP_DISTANCE_PX * jumpProgress *
+                (if (jumpFacingRight) 1.0 else -1.0)
+            x = (jumpStartX + horizontalOffset).coerceIn(0.0, screenWidthPx - size)
+            y = (jumpStartY - height).coerceIn(0.0, screenHeightPx - size)
+        }
+        return true
+    }
+
+    fun moveTowardFeed(deltaMs: Long, feedX: Double, feedY: Double, screenWidthPx: Double, screenHeightPx: Double): Boolean {
+        advanceAnimation(deltaMs)
+
+        if (updateJump(deltaMs, screenWidthPx, screenHeightPx)) return false
+
+        if (feedPeckRemainingMs > 0) {
+            feedPeckRemainingMs -= deltaMs
+            animState = ChickenAnimState.PECKING
+            return false
+        }
+
+        // Aim for a point that centers the (larger) chicken sprite over the
+        // feed pile, not the feed's raw top-left corner - otherwise the
+        // chicken's body extends down-right past the feed, making it look
+        // too low/off to the side once it "arrives". The feed staying visible
+        // below the chicken while pecking is a z-order fix, not a position
+        // one - see the bringToFront() call in OverlayRenderer.
+        val centeringOffset = (ChickenConfig.SIZE_PX - FeedConfig.SIZE_PX) / 2.0
+        val targetX = feedX - centeringOffset
+        val targetY = feedY - centeringOffset
+        val dx = targetX - x
+        val dy = targetY - y
+        val distance = kotlin.math.sqrt(dx * dx + dy * dy)
+
+        if (distance <= 10.0) {
+            feedPeckRemainingMs = ChickenConfig.PECK_DURATION_MS
+            animState = ChickenAnimState.PECKING
+            return true
+        }
+
+        val seconds = deltaMs / 1000.0
+        x += (dx / distance) * ChickenConfig.FEED_APPROACH_SPEED * seconds
+        y += (dy / distance) * ChickenConfig.FEED_APPROACH_SPEED * seconds
+        facingRight = dx > 0
+        animState = ChickenAnimState.WALKING
+        return false
+    }
+
+    private fun movingAnimState(): ChickenAnimState =
+        if (kotlin.math.abs(velocityX) + kotlin.math.abs(velocityY) > ChickenConfig.MOVING_SPEED_THRESHOLD) {
+            ChickenAnimState.WALKING
+        } else {
+            ChickenAnimState.IDLE
+        }
+
+    private fun advanceAnimation(deltaMs: Long) {
+        animFrameTimeMs += deltaMs
+        val speed = speedFor(animState)
+        if (animFrameTimeMs >= speed) {
+            animFrameTimeMs = 0L
+            val frames = framesFor(animState)
+            animFrameIndex = (animFrameIndex + 1) % frames.size
+        }
+    }
+
+    private fun framesFor(state: ChickenAnimState): IntArray = when (state) {
+        ChickenAnimState.IDLE -> ChickenConfig.IDLE_FRAMES
+        ChickenAnimState.WALKING -> ChickenConfig.WALKING_FRAMES
+        ChickenAnimState.PECKING -> ChickenConfig.PECKING_FRAMES
+        ChickenAnimState.JUMPING -> ChickenConfig.JUMPING_FRAMES
+        ChickenAnimState.SITTING -> ChickenConfig.SITTING_FRAMES
+    }
+
+    private fun speedFor(state: ChickenAnimState): Long = when (state) {
+        ChickenAnimState.IDLE -> ChickenConfig.IDLE_FRAME_SPEED_MS
+        ChickenAnimState.WALKING -> ChickenConfig.WALKING_FRAME_SPEED_MS
+        ChickenAnimState.PECKING -> ChickenConfig.PECKING_FRAME_SPEED_MS
+        ChickenAnimState.JUMPING -> ChickenConfig.JUMPING_FRAME_SPEED_MS
+        ChickenAnimState.SITTING -> ChickenConfig.SITTING_FRAME_SPEED_MS
+    }
+}

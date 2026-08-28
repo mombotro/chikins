@@ -9,11 +9,11 @@ if (hasReleaseKeystore) {
 }
 
 android {
-    namespace 'com.juleah.chickens'
+    namespace 'com.mombotro.chikins'
     compileSdk 35
 
     defaultConfig {
-        applicationId "com.juleah.chickens"
+        applicationId "com.mombotro.chikins"
         minSdk 16
         targetSdk 35
         versionCode 2

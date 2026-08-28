@@ -6,6 +6,6 @@
     <string name="stop_chickens">stop chikins</string>
     <string name="help_button">?</string>
     <string name="help_title">chikins</string>
-    <string name="kill_all_but_one">kill all but one chikin</string>
+    <string name="kill_all_but_one">cull all but one chikin</string>
     <string name="max_chikins_label">max chikins</string>
 </resources>

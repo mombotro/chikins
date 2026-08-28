@@ -85,7 +85,7 @@ class OverlayService : Service() {
                     val targetPile = targetId?.let { id -> flock.feedPiles.find { it.id == id } }
                     when {
                         targetPile != null -> {
-                            val reached = chicken.moveTowardFeed(deltaMs, targetPile.x, targetPile.y)
+                            val reached = chicken.moveTowardFeed(deltaMs, targetPile.x, targetPile.y, screenWidthPx, screenHeightPx)
                             if (reached && targetPile.consume()) chicken.clearTargetFeed()
                         }
                         else -> {

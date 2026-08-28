@@ -82,29 +82,7 @@ class ChickenEntity(
     fun wander(deltaMs: Long, screenWidthPx: Double, screenHeightPx: Double) {
         advanceAnimation(deltaMs)
 
-        if (isJumping) {
-            jumpProgress += deltaMs.toDouble() / ChickenConfig.JUMP_DURATION_MS
-            val size = ChickenConfig.SIZE_PX
-
-            if (jumpProgress >= 1.0) {
-                isJumping = false
-                jumpProgress = 0.0
-                x = jumpStartX + (if (jumpFacingRight) ChickenConfig.JUMP_DISTANCE_PX else -ChickenConfig.JUMP_DISTANCE_PX)
-                y = jumpStartY
-                x = x.coerceIn(0.0, screenWidthPx - size)
-                animState = movingAnimState()
-            } else {
-                // sin(progress*PI) rises from 0 to 1 and back to 0 across the jump,
-                // so height eases to zero velocity at the apex (slow at the top,
-                // fast at takeoff/landing) rather than moving at a constant rate.
-                val height = ChickenConfig.JUMP_HEIGHT_PX * kotlin.math.sin(jumpProgress * Math.PI)
-                val horizontalOffset = ChickenConfig.JUMP_DISTANCE_PX * jumpProgress *
-                    (if (jumpFacingRight) 1.0 else -1.0)
-                x = (jumpStartX + horizontalOffset).coerceIn(0.0, screenWidthPx - size)
-                y = (jumpStartY - height).coerceIn(0.0, screenHeightPx - size)
-            }
-            return
-        }
+        if (updateJump(deltaMs, screenWidthPx, screenHeightPx)) return
 
         if (isPecking) {
             peckRemainingMs -= deltaMs
@@ -165,18 +143,51 @@ class ChickenEntity(
         animState = movingAnimState()
     }
 
+    /** Tapping interrupts whatever the chicken is doing - including feed-seeking/pecking - into a jump; resumes afterward. */
     fun jump() {
-        if (isJumping || isPecking) return
+        if (isJumping) return
         isJumping = true
         jumpProgress = 0.0
         jumpStartX = x
         jumpStartY = y
         jumpFacingRight = facingRight
+        isPecking = false
+        peckRemainingMs = 0L
+        feedPeckRemainingMs = 0L
         animState = ChickenAnimState.JUMPING
     }
 
-    fun moveTowardFeed(deltaMs: Long, feedX: Double, feedY: Double): Boolean {
+    /** Shared by wander() and moveTowardFeed() so a jump interrupts either and both resume their own logic afterward. */
+    private fun updateJump(deltaMs: Long, screenWidthPx: Double, screenHeightPx: Double): Boolean {
+        if (!isJumping) return false
+
+        jumpProgress += deltaMs.toDouble() / ChickenConfig.JUMP_DURATION_MS
+        val size = ChickenConfig.SIZE_PX
+
+        if (jumpProgress >= 1.0) {
+            isJumping = false
+            jumpProgress = 0.0
+            x = jumpStartX + (if (jumpFacingRight) ChickenConfig.JUMP_DISTANCE_PX else -ChickenConfig.JUMP_DISTANCE_PX)
+            y = jumpStartY
+            x = x.coerceIn(0.0, screenWidthPx - size)
+            animState = movingAnimState()
+        } else {
+            // sin(progress*PI) rises from 0 to 1 and back to 0 across the jump,
+            // so height eases to zero velocity at the apex (slow at the top,
+            // fast at takeoff/landing) rather than moving at a constant rate.
+            val height = ChickenConfig.JUMP_HEIGHT_PX * kotlin.math.sin(jumpProgress * Math.PI)
+            val horizontalOffset = ChickenConfig.JUMP_DISTANCE_PX * jumpProgress *
+                (if (jumpFacingRight) 1.0 else -1.0)
+            x = (jumpStartX + horizontalOffset).coerceIn(0.0, screenWidthPx - size)
+            y = (jumpStartY - height).coerceIn(0.0, screenHeightPx - size)
+        }
+        return true
+    }
+
+    fun moveTowardFeed(deltaMs: Long, feedX: Double, feedY: Double, screenWidthPx: Double, screenHeightPx: Double): Boolean {
         advanceAnimation(deltaMs)
+
+        if (updateJump(deltaMs, screenWidthPx, screenHeightPx)) return false
 
         if (feedPeckRemainingMs > 0) {
             feedPeckRemainingMs -= deltaMs

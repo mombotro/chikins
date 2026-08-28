@@ -64,10 +64,16 @@ class ChickenEntity(
         return frames[animFrameIndex % frames.size]
     }
 
-    /** Called instead of wander() while this chicken is sitting on an egg. */
+    /**
+     * Called instead of wander() while this chicken is sitting on an egg.
+     * Centers the (larger) chicken sprite over the egg's center rather than
+     * matching top-left corners, which put the egg in the chicken's
+     * upper-left quadrant instead of underneath it.
+     */
     fun holdSittingPose(eggX: Double, eggY: Double, deltaMs: Long) {
-        x = eggX
-        y = eggY
+        val centeringOffset = (ChickenConfig.SIZE_PX - EggConfig.SIZE_PX) / 2.0
+        x = eggX - centeringOffset
+        y = eggY - centeringOffset
         animState = ChickenAnimState.SITTING
         advanceAnimation(deltaMs)
     }

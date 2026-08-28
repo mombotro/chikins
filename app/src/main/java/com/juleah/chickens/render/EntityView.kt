@@ -41,4 +41,12 @@ class EntityView(
             added = false
         }
     }
+
+    /** Re-adds this window so it stacks above every other window already added - windows added later render on top. */
+    fun bringToFront() {
+        if (added) {
+            windowManager.removeView(imageView)
+            windowManager.addView(imageView, layoutParams)
+        }
+    }
 }

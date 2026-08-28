@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.WindowManager
 import com.juleah.chickens.R
 import com.juleah.chickens.sim.ChickConfig
+import com.juleah.chickens.sim.ChickenAnimState
 import com.juleah.chickens.sim.ChickenConfig
 import com.juleah.chickens.sim.EggConfig
 import com.juleah.chickens.sim.FeedConfig
@@ -15,6 +16,7 @@ class OverlayRenderer(
 ) {
     private val chickenSprite = SpriteSheet(context, R.drawable.chicken, ChickenConfig.SIZE_PX)
     private val chickenViews = mutableMapOf<Long, EntityView>()
+    private val sittingChickenIds = mutableSetOf<Long>()
 
     private val chickSprite = SpriteSheet(context, R.drawable.chick, ChickConfig.SIZE_PX)
     private val chickViews = mutableMapOf<Long, EntityView>()
@@ -37,6 +39,17 @@ class OverlayRenderer(
                     it.imageView.setOnClickListener { _ -> chicken.jump() }
                 }
             }
+            val isSittingNow = chicken.animState == ChickenAnimState.SITTING
+            if (isSittingNow && sittingChickenIds.add(chicken.id)) {
+                // Just started sitting: force this window above the egg's, which was
+                // added later (eggs don't exist until laid) and would otherwise stack
+                // on top per Android's last-added-wins ordering for sibling overlay
+                // windows.
+                view.bringToFront()
+            } else if (!isSittingNow) {
+                sittingChickenIds.remove(chicken.id)
+            }
+
             view.imageView.setImageBitmap(chickenSprite.frame(chicken.currentSpriteFrame()))
             view.imageView.scaleX = if (chicken.facingRight) -1f else 1f
             view.show(chicken.x, chicken.y)

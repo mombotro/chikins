@@ -166,7 +166,7 @@ class OverlayService : Service() {
         )
         feedBagView.show(
             dockX = (screenWidthPx - dockSizePx - 24).toInt(),
-            dockY = (screenHeightPx - dockSizePx - 24).toInt()
+            dockY = ((screenHeightPx - dockSizePx) / 2.0).toInt()
         )
     }
 

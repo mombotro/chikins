@@ -1,0 +1,100 @@
+package com.juleah.chickens
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Intent
+import android.os.Build
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.util.DisplayMetrics
+import android.util.Log
+import android.view.WindowManager
+import com.juleah.chickens.sim.Flock
+import com.juleah.chickens.sim.RandomRng
+import com.juleah.chickens.sim.SystemClock
+
+class OverlayService : Service() {
+
+    companion object {
+        private const val TAG = "OverlayService"
+        private const val NOTIFICATION_CHANNEL_ID = "chickens_overlay"
+        private const val NOTIFICATION_ID = 1
+        const val TICK_INTERVAL_MS = 33L // ~30fps
+    }
+
+    lateinit var windowManager: WindowManager
+        private set
+    var screenWidthPx: Double = 0.0
+        private set
+    var screenHeightPx: Double = 0.0
+        private set
+    lateinit var flock: Flock
+        private set
+
+    private val tickHandler = Handler(Looper.getMainLooper())
+    private var isRunning = false
+
+    private val tickRunnable = object : Runnable {
+        override fun run() {
+            flock.tick()
+            Log.d(TAG, "population=${flock.populationCount()}")
+            if (isRunning) {
+                tickHandler.postDelayed(this, TICK_INTERVAL_MS)
+            }
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        val metrics = DisplayMetrics()
+        @Suppress("DEPRECATION")
+        windowManager.defaultDisplay.getMetrics(metrics)
+        screenWidthPx = metrics.widthPixels.toDouble()
+        screenHeightPx = metrics.heightPixels.toDouble()
+
+        flock = Flock(
+            clock = SystemClock(),
+            rng = RandomRng(),
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx
+        )
+        flock.seedInitialPopulation()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground(NOTIFICATION_ID, buildNotification())
+        }
+        if (!isRunning) {
+            isRunning = true
+            tickHandler.post(tickRunnable)
+        }
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        isRunning = false
+        tickHandler.removeCallbacks(tickRunnable)
+        super.onDestroy()
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun buildNotification(): Notification {
+        val manager = getSystemService(NotificationManager::class.java)
+        val channel = NotificationChannel(
+            NOTIFICATION_CHANNEL_ID,
+            getString(R.string.app_name),
+            NotificationManager.IMPORTANCE_MIN
+        )
+        manager.createNotificationChannel(channel)
+        return Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(getString(R.string.status_running))
+            .setSmallIcon(android.R.drawable.ic_menu_today)
+            .build()
+    }
+}

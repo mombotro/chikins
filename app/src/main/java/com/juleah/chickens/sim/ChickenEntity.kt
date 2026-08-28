@@ -184,11 +184,18 @@ class ChickenEntity(
             return false
         }
 
-        val dx = feedX - x
-        val dy = feedY - y
+        // Aim for a point that centers the (larger) chicken sprite over the
+        // feed pile, not the feed's raw top-left corner - otherwise the
+        // chicken's body extends down-right past the feed, making it look
+        // too low/off to the side once it "arrives".
+        val centeringOffset = (ChickenConfig.SIZE_PX - FeedConfig.SIZE_PX) / 2.0
+        val targetX = feedX - centeringOffset
+        val targetY = feedY - centeringOffset
+        val dx = targetX - x
+        val dy = targetY - y
         val distance = kotlin.math.sqrt(dx * dx + dy * dy)
 
-        if (distance <= 20.0) {
+        if (distance <= 10.0) {
             feedPeckRemainingMs = ChickenConfig.PECK_DURATION_MS
             animState = ChickenAnimState.PECKING
             return true

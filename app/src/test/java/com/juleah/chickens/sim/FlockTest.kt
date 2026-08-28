@@ -81,6 +81,10 @@ class FlockTest {
 
         clock.set(EggConfig.MIN_SITTING_REQUIRED_MS)
         flock.tick()
+        clock.set(EggConfig.MIN_SITTING_REQUIRED_MS + EggConfig.MOVE_AWAY_DELAY_MS)
+        flock.tick()
+        clock.set(EggConfig.MIN_SITTING_REQUIRED_MS + EggConfig.MOVE_AWAY_DELAY_MS + EggConfig.HATCH_DURATION_MS)
+        flock.tick()
 
         assertEquals(1, flock.eggsReadyToHatch().size)
 

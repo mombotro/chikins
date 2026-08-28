@@ -55,7 +55,7 @@ class Flock(
         if (now - last < ChickenConfig.EGG_COOLDOWN_MS) return null
         if (rng.nextDouble() >= ChickenConfig.EGG_LAY_CHANCE * (deltaMs / 1000.0)) return null
         lastEggTimeByChickenId[chicken.id] = now
-        return layEgg(chicken.id, chicken.x, chicken.y)
+        return layEgg(chicken.id, chicken.x + EggConfig.LAY_OFFSET_X_PX, chicken.y + EggConfig.LAY_OFFSET_Y_PX)
     }
 
     fun maybeSitOnEgg(chicken: ChickenEntity, deltaMs: Long): EggEntity? {
@@ -75,7 +75,7 @@ class Flock(
         return kotlin.math.sqrt(dx * dx + dy * dy)
     }
 
-    fun eggsReadyToHatch(): List<EggEntity> = eggs.filter { it.state == EggState.HATCHING }
+    fun eggsReadyToHatch(): List<EggEntity> = eggs.filter { it.state == EggState.HATCHING && it.isReadyToHatch }
 
     fun confirmHatch(eggId: Long) {
         val egg = eggs.find { it.id == eggId } ?: return

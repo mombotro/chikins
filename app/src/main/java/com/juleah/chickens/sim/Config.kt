@@ -91,8 +91,20 @@ object ChickConfig {
 
 object EggConfig {
     const val SIZE_PX = 16
-    const val MIN_SITTING_REQUIRED_MS = 45_000L
-    const val MAX_SITTING_REQUIRED_MS = 90_000L
+    const val MIN_SITTING_REQUIRED_MS = 15_000L
+    const val MAX_SITTING_REQUIRED_MS = 30_000L
+
+    // Gap between the chicken leaving (sitting timer done) and the hatching
+    // animation visibly starting, so the chicken has time to actually walk
+    // away first instead of the egg hatching right under it.
+    const val MOVE_AWAY_DELAY_MS = 2000L
+    // How long the HATCHING frame is shown before the chick actually appears.
+    const val HATCH_DURATION_MS = 2500L
+
+    // Offset from the laying chicken's position - below and to the right,
+    // not directly under it.
+    const val LAY_OFFSET_X_PX = 12.0
+    const val LAY_OFFSET_Y_PX = 24.0
 }
 
 object FeedConfig {

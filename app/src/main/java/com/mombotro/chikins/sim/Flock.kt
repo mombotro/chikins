@@ -102,8 +102,16 @@ class Flock(
     fun eggsReadyToHatch(): List<EggEntity> =
         eggs.filter { it.state == EggState.HATCHING && it.isReadyToHatch && !it.hatchConfirmed }
 
-    /** Creates the chick; the egg's empty-shell view lingers until its own SHELL_VISIBLE_MS elapses (see tick()). */
+    /**
+     * Creates the chick; the egg's empty-shell view lingers until its own SHELL_VISIBLE_MS
+     * elapses (see tick()). Withheld at/above MAX_POPULATION - hatching is otherwise
+     * uncapped (only laying a *new* egg is gated by canLayEgg()), so eggs already laid
+     * before the cap was hit would otherwise hatch unconditionally and push the flock
+     * permanently over the configured max. The egg just idles at its ready-to-hatch
+     * sprite frame (see EggEntity.tick()) until population drops back under the cap.
+     */
     fun confirmHatch(eggId: Long) {
+        if (PopulationRegulator.decide(populationCount()) == PopulationAction.SUPPRESS_EGG_LAYING) return
         val egg = eggs.find { it.id == eggId } ?: return
         if (egg.state != EggState.HATCHING || !egg.isReadyToHatch || egg.hatchConfirmed) return
         chicks.add(egg.hatch(newChickId = newId(), nowMs = clock.nowMs()))

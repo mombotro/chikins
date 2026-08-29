@@ -99,4 +99,42 @@ class FlockTest {
 
         assertTrue(flock.eggs.isEmpty())
     }
+
+    @Test
+    fun `confirmHatch withholds the chick when population is already at maximum`() {
+        val clock = FakeClock(0L)
+        // Plain FakeRng() (no longValue override) returns each nextLongInRange
+        // call's own `min` - unlike a shared fixed longValue, this keeps the
+        // MAX_POPULATION chickens' lifespan (min 5 minutes) safely independent
+        // from the egg's sitting duration (min 15s), so the chickens don't die
+        // out from under the test before the egg reaches hatching.
+        val rng = FakeRng()
+        val flock = newFlock(clock, rng)
+        repeat(PopulationConfig.MAX_POPULATION) { flock.spawnAdultChicken() }
+        val egg = flock.layEgg(chickenId = flock.chickens.first().id, x = 10.0, y = 10.0)
+        egg.startSitting(chickenId = flock.chickens.first().id, nowMs = 0L)
+
+        clock.set(EggConfig.MIN_SITTING_REQUIRED_MS)
+        flock.tick()
+        clock.set(EggConfig.MIN_SITTING_REQUIRED_MS + EggConfig.MOVE_AWAY_DELAY_MS)
+        flock.tick()
+        val readyMs = EggConfig.MIN_SITTING_REQUIRED_MS + EggConfig.MOVE_AWAY_DELAY_MS + EggConfig.HATCH_FRAME_DELAY_MS * 3
+        clock.set(readyMs)
+        flock.tick()
+        assertEquals(1, flock.eggsReadyToHatch().size)
+
+        val populationBefore = flock.populationCount()
+        flock.confirmHatch(egg.id)
+
+        assertEquals(populationBefore, flock.populationCount())
+        assertTrue(flock.chicks.isEmpty())
+        assertFalse(egg.hatchConfirmed)
+
+        // Once population drops back under the cap, the same still-pending egg hatches normally.
+        flock.chickens.remove(flock.chickens.first())
+        flock.confirmHatch(egg.id)
+
+        assertEquals(1, flock.chicks.size)
+        assertTrue(egg.hatchConfirmed)
+    }
 }

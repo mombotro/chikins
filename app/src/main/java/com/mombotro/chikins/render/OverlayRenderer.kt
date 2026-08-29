@@ -50,11 +50,16 @@ class OverlayRenderer(
                 sittingChickenIds.remove(chicken.id)
             }
 
-            view.imageView.setImageBitmap(chickenSprite.frame(chicken.currentSpriteFrame()))
             // chicken.png's frames are drawn facing left natively (confirmed by
             // cropping/inspecting the sprite sheet directly - beak/comb on the
-            // left, tail on the right), so mirror only when facing right.
-            view.imageView.scaleX = if (chicken.facingRight) -1f else 1f
+            // left, tail on the right), so use the pre-mirrored frame when
+            // facing right. Not done via ImageView.scaleX: that transform
+            // doesn't reliably repaint on this app's overlay windows on real
+            // hardware (updateViewLayout() moves the window but doesn't always
+            // recomposite a transform-only property change), so a flipped
+            // facingRight silently never showed on device despite the
+            // property reading back correctly right after being set.
+            view.imageView.setImageBitmap(chickenSprite.frame(chicken.currentSpriteFrame(), mirrored = chicken.facingRight))
             view.show(chicken.x, chicken.y)
         }
 
@@ -69,9 +74,9 @@ class OverlayRenderer(
                     it.imageView.setOnClickListener { _ -> chick.handleTap() }
                 }
             }
-            view.imageView.setImageBitmap(chickSprite.frame(chick.currentSpriteFrame()))
-            // chick.png also faces left natively, same as chicken.png.
-            view.imageView.scaleX = if (chick.facingRight) -1f else 1f
+            // chick.png also faces left natively, same as chicken.png; same
+            // pre-mirrored-bitmap approach for the same reason (see chicken above).
+            view.imageView.setImageBitmap(chickSprite.frame(chick.currentSpriteFrame(), mirrored = chick.facingRight))
             view.show(chick.x, chick.y)
         }
 

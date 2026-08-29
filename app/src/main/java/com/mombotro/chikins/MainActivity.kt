@@ -27,7 +27,14 @@ class MainActivity : Activity() {
         private const val PREF_SHOW_FEED_BAG = "show_feed_bag"
     }
 
-    private var isServiceRunning = false
+    // Was a plain in-memory field defaulting to false on every fresh onCreate(),
+    // so reopening the app while OverlayService was still alive in the
+    // background (e.g. after Android killed and START_STICKY auto-restarted
+    // just the service, without this Activity restarting) always showed "not
+    // running" regardless of the actual state. Now derived live from whether
+    // the service singleton actually exists.
+    private val isServiceRunning: Boolean
+        get() = OverlayService.instance != null
     private lateinit var statusText: TextView
     private lateinit var toggleButton: Button
     private lateinit var maxChikinSeekBar: SeekBar
@@ -138,13 +145,11 @@ class MainActivity : Activity() {
 
     private fun startOverlay() {
         startService(Intent(this, OverlayService::class.java))
-        isServiceRunning = true
         updateUi()
     }
 
     private fun stopOverlay() {
         stopService(Intent(this, OverlayService::class.java))
-        isServiceRunning = false
         updateUi()
     }
 

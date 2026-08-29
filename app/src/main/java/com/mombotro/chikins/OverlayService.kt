@@ -20,6 +20,7 @@ import com.mombotro.chikins.render.PlacementOverlay
 import com.mombotro.chikins.sim.EggState
 import com.mombotro.chikins.sim.FeedConfig
 import com.mombotro.chikins.sim.Flock
+import com.mombotro.chikins.sim.PopulationConfig
 import com.mombotro.chikins.sim.RandomRng
 import com.mombotro.chikins.sim.SystemClock
 
@@ -33,6 +34,8 @@ class OverlayService : Service() {
         private const val ACTION_CULL = "com.mombotro.chikins.ACTION_CULL"
         private const val PREFS_NAME = "chikins_prefs"
         private const val PREF_SHOW_FEED_BAG = "show_feed_bag"
+        // Must match MainActivity's PREF_MAX_POPULATION key - both read/write the same pref.
+        private const val PREF_MAX_POPULATION = "max_population"
 
         /** Same-process reference so MainActivity can reach the live Flock (e.g. "kill all but one") while running. */
         var instance: OverlayService? = null
@@ -162,6 +165,18 @@ class OverlayService : Service() {
         windowManager.defaultDisplay.getMetrics(metrics)
         screenWidthPx = metrics.widthPixels.toDouble()
         screenHeightPx = metrics.heightPixels.toDouble()
+
+        // PopulationConfig.MAX_POPULATION is a plain in-memory singleton, and this
+        // service can start (or auto-restart via START_STICKY, e.g. after Android
+        // kills the process under memory pressure) without MainActivity ever having
+        // run first - MainActivity.onCreate() is the only other place that restores
+        // this from SharedPreferences, so relying on it alone left fresh service
+        // instances silently using Config.kt's hardcoded default (15) instead of
+        // whatever cap the user actually set, with no UI indication anything was
+        // wrong. Restore it here too so the cap holds regardless of which
+        // component happens to start first.
+        PopulationConfig.MAX_POPULATION = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getInt(PREF_MAX_POPULATION, PopulationConfig.MAX_POPULATION)
 
         flock = Flock(
             clock = SystemClock(),

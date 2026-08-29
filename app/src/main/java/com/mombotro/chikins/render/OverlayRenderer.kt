@@ -51,7 +51,9 @@ class OverlayRenderer(
             }
 
             view.imageView.setImageBitmap(chickenSprite.frame(chicken.currentSpriteFrame()))
-            view.imageView.scaleX = if (chicken.facingRight) -1f else 1f
+            // chicken.png's frames are drawn facing right natively, so no flip
+            // is needed to face right - only mirror when facing left.
+            view.imageView.scaleX = if (chicken.facingRight) 1f else -1f
             view.show(chicken.x, chicken.y)
         }
 
@@ -67,7 +69,8 @@ class OverlayRenderer(
                 }
             }
             view.imageView.setImageBitmap(chickSprite.frame(chick.currentSpriteFrame()))
-            view.imageView.scaleX = if (chick.facingRight) -1f else 1f
+            // chick.png also faces right natively, same as chicken.png.
+            view.imageView.scaleX = if (chick.facingRight) 1f else -1f
             view.show(chick.x, chick.y)
         }
 
